@@ -5,6 +5,7 @@ import { InputManager } from './input/InputManager'
 import { Camera } from './render/Camera'
 import { Level } from './level/Level'
 import { Player } from './entities/Player'
+import { SpriteLoader } from './sprites/SpriteLoader'
 
 export interface GameConfig {
   width?: number
@@ -34,6 +35,8 @@ export class GameEngine {
   private score = 0
   private lives = 3
   private coins = 0
+  private spriteLoader: SpriteLoader
+  private spritesInitialized = false
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
     this.canvas = canvas
@@ -49,6 +52,7 @@ export class GameEngine {
     this.entityManager = new EntityManager()
     this.inputManager = new InputManager()
     this.camera = new Camera(this.canvas.width, this.canvas.height)
+    this.spriteLoader = SpriteLoader.getInstance()
 
     this.fps = config.fps || 60
     this.frameInterval = 1000 / this.fps
@@ -61,7 +65,7 @@ export class GameEngine {
     this.currentLevel = new Level()
 
     // Add some platforms
-    this.currentLevel.addPlatform(0, 500, 2000, 76, 'ground')
+    this.currentLevel.addPlatform(0, 500, 2000, 76, 'platform')
     this.currentLevel.addPlatform(300, 400, 100, 20, 'platform')
     this.currentLevel.addPlatform(500, 350, 150, 20, 'platform')
     this.currentLevel.addPlatform(750, 300, 100, 20, 'platform')
@@ -98,12 +102,39 @@ export class GameEngine {
     }
   }
 
-  public start() {
+  public async initialize() {
+    if (!this.spritesInitialized) {
+      console.log('Loading sprites...')
+      try {
+        await this.spriteLoader.initializeGameSprites()
+        this.spritesInitialized = true
+        console.log('Sprites loaded!')
+      } catch (error) {
+        console.warn('Failed to load sprites, falling back to basic rendering:', error)
+        this.spritesInitialized = false
+      }
+    }
+  }
+
+  public async start() {
     if (this.running) return
+
+    // Initialize sprites first
+    await this.initialize()
+
     this.running = true
     this.paused = false
     this.lastTime = performance.now()
     this.gameLoop()
+  }
+
+  // Getters for debug access
+  public get currentLevel() {
+    return this.currentLevel
+  }
+
+  public get entityManager() {
+    return this.entityManager
   }
 
   public pause() {

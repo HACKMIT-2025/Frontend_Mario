@@ -1,5 +1,7 @@
 import { Entity } from '../entities/Entity'
 import { Level } from '../level/Level'
+import { SpriteLoader } from '../sprites/SpriteLoader'
+import { DebugMode } from '../debug/DebugMode'
 
 export interface UIData {
   score: number
@@ -13,11 +15,15 @@ export class Renderer {
   private height: number
   private backgroundColor = '#5C94FC' // Mario sky blue
   private layers: Map<string, HTMLCanvasElement> = new Map()
+  private spriteLoader: SpriteLoader
+  private debugMode: DebugMode
 
   constructor(ctx: CanvasRenderingContext2D, width: number, height: number) {
     this.ctx = ctx
     this.width = width
     this.height = height
+    this.spriteLoader = SpriteLoader.getInstance()
+    this.debugMode = DebugMode.getInstance()
     this.initializeLayers()
   }
 
@@ -38,11 +44,22 @@ export class Renderer {
   }
 
   public renderBackground() {
+    // Sky gradient
     const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height)
     gradient.addColorStop(0, '#5C94FC')
     gradient.addColorStop(1, '#87CEEB')
     this.ctx.fillStyle = gradient
     this.ctx.fillRect(0, 0, this.width * 3, this.height)
+
+    // Draw background mountains
+    this.spriteLoader.drawSprite(this.ctx, 'mountain', 0, 50, this.height - 200, 128, 128)
+    this.spriteLoader.drawSprite(this.ctx, 'mountain', 0, 300, this.height - 180, 128, 128)
+    this.spriteLoader.drawSprite(this.ctx, 'mountain', 0, 550, this.height - 220, 128, 128)
+
+    // Draw background trees
+    this.spriteLoader.drawSprite(this.ctx, 'tree', 0, 150, this.height - 160, 64, 96)
+    this.spriteLoader.drawSprite(this.ctx, 'tree', 0, 400, this.height - 140, 64, 96)
+    this.spriteLoader.drawSprite(this.ctx, 'tree', 0, 650, this.height - 180, 64, 96)
 
     // Draw clouds
     this.drawCloud(100, 100)
@@ -75,82 +92,156 @@ export class Renderer {
     this.ctx.save()
 
     switch(platform.type) {
-      case 'ground':
-        // Draw ground with grass on top
-        this.ctx.fillStyle = '#8B4513' // Brown
-        this.ctx.fillRect(platform.x, platform.y + 10, platform.width, platform.height - 10)
-        this.ctx.fillStyle = '#228B22' // Green grass
-        this.ctx.fillRect(platform.x, platform.y, platform.width, 10)
-        // Add grass details
-        this.ctx.strokeStyle = '#2E7D32'
-        for (let i = 0; i < platform.width; i += 10) {
-          this.ctx.beginPath()
-          this.ctx.moveTo(platform.x + i, platform.y + 10)
-          this.ctx.lineTo(platform.x + i + 2, platform.y)
-          this.ctx.lineTo(platform.x + i + 4, platform.y + 10)
-          this.ctx.stroke()
-        }
-        break
 
       case 'brick':
-        this.ctx.fillStyle = '#8B4513'
-        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
-        // Draw brick pattern
-        this.ctx.strokeStyle = '#654321'
-        this.ctx.lineWidth = 2
-        for (let y = 0; y < platform.height; y += 16) {
-          for (let x = 0; x < platform.width; x += 32) {
-            const offset = (y / 16) % 2 === 0 ? 0 : 16
-            this.ctx.strokeRect(platform.x + x + offset, platform.y + y, 32, 16)
+        let brickSuccess = true
+        // Try to use brick sprite
+        for (let x = 0; x < platform.width; x += 32) {
+          for (let y = 0; y < platform.height; y += 32) {
+            const drawn = this.spriteLoader.drawSprite(
+              this.ctx,
+              'brick',
+              0,
+              platform.x + x,
+              platform.y + y,
+              Math.min(32, platform.width - x),
+              Math.min(32, platform.height - y)
+            )
+            if (!drawn) brickSuccess = false
           }
         }
+
+        // Fallback if sprite failed
+        if (!brickSuccess) {
+          this.ctx.fillStyle = '#8B4513'
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+          // Draw brick pattern
+          this.ctx.strokeStyle = '#654321'
+          this.ctx.lineWidth = 2
+          for (let y = 0; y < platform.height; y += 16) {
+            for (let x = 0; x < platform.width; x += 32) {
+              const offset = (y / 16) % 2 === 0 ? 0 : 16
+              this.ctx.strokeRect(platform.x + x + offset, platform.y + y, 32, 16)
+            }
+          }
+        }
+
+        this.debugMode.logPlatformRender('brick', brickSuccess)
         break
 
       case 'question':
-        // Question block
-        this.ctx.fillStyle = '#FFA500'
-        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
-        this.ctx.strokeStyle = '#FF8C00'
-        this.ctx.lineWidth = 3
-        this.ctx.strokeRect(platform.x, platform.y, platform.width, platform.height)
-        // Draw question mark
-        this.ctx.fillStyle = '#FFFFFF'
-        this.ctx.font = 'bold 20px Arial'
-        this.ctx.textAlign = 'center'
-        this.ctx.textBaseline = 'middle'
-        this.ctx.fillText('?', platform.x + platform.width / 2, platform.y + platform.height / 2)
+        let questionSuccess = true
+        // Try to use question block sprite
+        for (let x = 0; x < platform.width; x += 32) {
+          for (let y = 0; y < platform.height; y += 32) {
+            const drawn = this.spriteLoader.drawSprite(
+              this.ctx,
+              'question',
+              0,
+              platform.x + x,
+              platform.y + y,
+              Math.min(32, platform.width - x),
+              Math.min(32, platform.height - y)
+            )
+            if (!drawn) questionSuccess = false
+          }
+        }
+
+        // Fallback if sprite failed
+        if (!questionSuccess) {
+          this.ctx.fillStyle = '#FFA500'
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+          this.ctx.strokeStyle = '#FF8C00'
+          this.ctx.lineWidth = 3
+          this.ctx.strokeRect(platform.x, platform.y, platform.width, platform.height)
+          // Draw question mark
+          this.ctx.fillStyle = '#FFFFFF'
+          this.ctx.font = 'bold 20px Arial'
+          this.ctx.textAlign = 'center'
+          this.ctx.textBaseline = 'middle'
+          this.ctx.fillText('?', platform.x + platform.width / 2, platform.y + platform.height / 2)
+        }
+
+        this.debugMode.logPlatformRender('question', questionSuccess)
         break
 
       case 'pipe':
-        // Draw pipe
-        this.ctx.fillStyle = '#00AA00'
-        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
-        // Pipe top
-        this.ctx.fillStyle = '#00CC00'
-        this.ctx.fillRect(platform.x - 8, platform.y, platform.width + 16, 32)
-        // Pipe highlights
-        this.ctx.strokeStyle = '#00FF00'
-        this.ctx.lineWidth = 2
-        this.ctx.beginPath()
-        this.ctx.moveTo(platform.x + 5, platform.y + 32)
-        this.ctx.lineTo(platform.x + 5, platform.y + platform.height)
-        this.ctx.stroke()
+        let pipeSuccess = true
+        // Try to draw pipe top
+        const topDrawn = this.spriteLoader.drawSprite(
+          this.ctx,
+          'pipe_top',
+          0,
+          platform.x - 8,
+          platform.y,
+          platform.width + 16,
+          32
+        )
+        if (!topDrawn) pipeSuccess = false
+
+        // Try to draw pipe body
+        for (let y = 32; y < platform.height; y += 32) {
+          const bodyDrawn = this.spriteLoader.drawSprite(
+            this.ctx,
+            'pipe_body',
+            0,
+            platform.x,
+            platform.y + y,
+            platform.width,
+            Math.min(32, platform.height - y)
+          )
+          if (!bodyDrawn) pipeSuccess = false
+        }
+
+        // Fallback if sprite failed
+        if (!pipeSuccess) {
+          this.ctx.fillStyle = '#00AA00'
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+          // Pipe top
+          this.ctx.fillStyle = '#00CC00'
+          this.ctx.fillRect(platform.x - 8, platform.y, platform.width + 16, 32)
+          // Pipe highlights
+          this.ctx.strokeStyle = '#00FF00'
+          this.ctx.lineWidth = 2
+          this.ctx.beginPath()
+          this.ctx.moveTo(platform.x + 5, platform.y + 32)
+          this.ctx.lineTo(platform.x + 5, platform.y + platform.height)
+          this.ctx.stroke()
+        }
+
+        this.debugMode.logPlatformRender('pipe', pipeSuccess)
         break
 
       case 'goal_pipe':
-        // Draw goal pipe (victory pipe) in golden color
-        this.ctx.fillStyle = '#FFD700'
-        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
-        // Pipe top
-        this.ctx.fillStyle = '#FFA500'
-        this.ctx.fillRect(platform.x - 8, platform.y, platform.width + 16, 32)
-        // Pipe highlights
-        this.ctx.strokeStyle = '#FFFF00'
-        this.ctx.lineWidth = 2
-        this.ctx.beginPath()
-        this.ctx.moveTo(platform.x + 5, platform.y + 32)
-        this.ctx.lineTo(platform.x + 5, platform.y + platform.height)
-        this.ctx.stroke()
+        // Apply golden filter for goal pipe
+        this.ctx.save()
+        this.ctx.filter = 'hue-rotate(60deg) saturate(1.5) brightness(1.2)'
+
+        // Draw pipe top
+        this.spriteLoader.drawSprite(
+          this.ctx,
+          'pipe_top',
+          0,
+          platform.x - 8,
+          platform.y,
+          platform.width + 16,
+          32
+        )
+        // Draw pipe body
+        for (let y = 32; y < platform.height; y += 32) {
+          this.spriteLoader.drawSprite(
+            this.ctx,
+            'pipe_body',
+            0,
+            platform.x,
+            platform.y + y,
+            platform.width,
+            Math.min(32, platform.height - y)
+          )
+        }
+
+        this.ctx.restore()
+
         // Add sparkle effect
         this.ctx.fillStyle = '#FFFFFF'
         this.ctx.font = 'bold 16px Arial'
@@ -159,12 +250,57 @@ export class Renderer {
         break
 
       case 'platform':
-        // Floating platform
-        this.ctx.fillStyle = '#8B7355'
-        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
-        // Add some texture
-        this.ctx.fillStyle = '#A0826D'
-        this.ctx.fillRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4)
+        let grassDrawn = true
+        let terrainDrawn = true
+
+        // Try to use grass sprite for top layer
+        for (let x = 0; x < platform.width; x += 32) {
+          const drawn = this.spriteLoader.drawSprite(
+            this.ctx,
+            'grass',
+            0,
+            platform.x + x,
+            platform.y,
+            Math.min(32, platform.width - x),
+            32
+          )
+          if (!drawn) grassDrawn = false
+        }
+
+        // Try to use terrain sprite for ground base
+        for (let x = 0; x < platform.width; x += 32) {
+          for (let y = 10; y < platform.height; y += 32) {
+            const drawn = this.spriteLoader.drawSprite(
+              this.ctx,
+              'terrain',
+              0,
+              platform.x + x,
+              platform.y + y,
+              Math.min(32, platform.width - x),
+              Math.min(32, platform.height - y)
+            )
+            if (!drawn) terrainDrawn = false
+          }
+        }
+
+        // Fallback to original rendering if sprites failed
+        if (!grassDrawn || !terrainDrawn) {
+          this.ctx.fillStyle = '#8B4513' // Brown
+          this.ctx.fillRect(platform.x, platform.y + 10, platform.width, platform.height - 10)
+          this.ctx.fillStyle = '#228B22' // Green grass
+          this.ctx.fillRect(platform.x, platform.y, platform.width, 10)
+          // Add grass details
+          this.ctx.strokeStyle = '#2E7D32'
+          for (let i = 0; i < platform.width; i += 10) {
+            this.ctx.beginPath()
+            this.ctx.moveTo(platform.x + i, platform.y + 10)
+            this.ctx.lineTo(platform.x + i + 2, platform.y)
+            this.ctx.lineTo(platform.x + i + 4, platform.y + 10)
+            this.ctx.stroke()
+          }
+        }
+
+        this.debugMode.logPlatformRender('platform', grassDrawn && terrainDrawn)
         break
 
       case 'underground':
@@ -195,16 +331,53 @@ export class Renderer {
         break
 
       default:
-        // Default platform
-        this.ctx.fillStyle = '#808080'
+        // Unknown platform type - make it obvious for debugging
+        this.ctx.fillStyle = '#FF00FF' // Magenta for unknown types
         this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+        this.ctx.fillStyle = '#FFFFFF'
+        this.ctx.font = 'bold 12px Arial'
+        this.ctx.textAlign = 'center'
+        this.ctx.textBaseline = 'middle'
+        this.ctx.fillText(`?${platform.type}?`, platform.x + platform.width / 2, platform.y + platform.height / 2)
+
+        console.warn(`🚨 Unknown platform type: ${platform.type}`)
+        this.debugMode.logPlatformRender(`UNKNOWN:${platform.type}`, false)
     }
+
+    // Draw debug collision box
+    this.debugMode.drawCollisionBox(
+      this.ctx,
+      platform.x,
+      platform.y,
+      platform.width,
+      platform.height,
+      platform.type
+    )
 
     this.ctx.restore()
   }
 
   public renderEntity(entity: Entity) {
     entity.render(this.ctx)
+
+    // Draw debug info for entity
+    this.debugMode.drawEntityInfo(
+      this.ctx,
+      entity,
+      entity.position.x,
+      entity.position.y
+    )
+
+    // Draw entity collision box
+    this.debugMode.drawCollisionBox(
+      this.ctx,
+      entity.position.x,
+      entity.position.y,
+      entity.width,
+      entity.height,
+      entity.type,
+      '#00FF00' // Green for entities
+    )
   }
 
   public renderUI(data: UIData) {

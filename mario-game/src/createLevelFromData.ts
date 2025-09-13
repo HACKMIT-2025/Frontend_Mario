@@ -15,7 +15,7 @@ export function createLevelFromImageData(engine: GameEngine): void {
   // 这个平台有复杂的轮廓，我们简化为几个关键的平台段
 
   // 左侧地面段 (基于轮廓点分析)
-  levelBuilder.addPlatform(0, 550, 400, 30, 'ground')
+  levelBuilder.addPlatform(0, 550, 400, 30, 'platform')
 
   // 中间平台段
   levelBuilder.addPlatform(280, 400, 200, 20, 'platform')
@@ -110,7 +110,7 @@ export function buildLevelFromAnalysisData(
       // 根据尺寸判断平台类型
       if (width > 200 && height > 50) {
         // 大平台作为地面
-        levelBuilder.addPlatform(x, y + height - 30, width, 30, 'ground')
+        levelBuilder.addPlatform(x, y + height - 30, width, 30, 'platform')
       } else if (width > 50) {
         // 中等平台
         levelBuilder.addPlatform(x, y, width, Math.max(height, 20), 'platform')

@@ -171,7 +171,7 @@ export class LevelBuilder {
     this.clear()
 
     // Ground
-    this.addPlatform(0, 500, 3000, 76, 'ground')
+    this.addPlatform(0, 500, 3000, 76, 'platform')
 
     // First section - basic platforms and coins
     this.addCoinRow(200, 350, 5)
@@ -304,7 +304,6 @@ export class LevelBuilder {
     imageData.forEach(obj => {
       switch(obj.type) {
         case 'platform':
-        case 'ground':
         case 'brick':
         case 'pipe':
           this.addPlatform(obj.x, obj.y, obj.width || 32, obj.height || 32, obj.type)
