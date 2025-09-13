@@ -1,4 +1,5 @@
 import { Platform } from './Platform'
+import { Polygon } from './Polygon'
 import { Enemy } from '../entities/Enemy'
 import { Coin } from '../entities/Coin'
 import { PowerUp } from '../entities/PowerUp'
@@ -6,6 +7,7 @@ import { Entity } from '../entities/Entity'
 
 export class Level {
   private platforms: Platform[] = []
+  private polygons: Polygon[] = []
   private entities: Entity[] = []
   private levelWidth = 3000
   private levelHeight = 600
@@ -15,6 +17,12 @@ export class Level {
     const platform = new Platform(x, y, width, height, type)
     this.platforms.push(platform)
     return platform
+  }
+
+  public addPolygon(contours: number[][], type = 'polygon'): Polygon {
+    const polygon = new Polygon(contours, type)
+    this.polygons.push(polygon)
+    return polygon
   }
 
   public addEnemy(x: number, y: number, type: string): Enemy {
@@ -37,6 +45,10 @@ export class Level {
 
   public getPlatforms(): Platform[] {
     return this.platforms
+  }
+
+  public getPolygons(): Polygon[] {
+    return this.polygons
   }
 
   public getEntities(): Entity[] {
@@ -66,6 +78,7 @@ export class Level {
 
   public clear() {
     this.platforms = []
+    this.polygons = []
     this.entities = []
   }
 
@@ -73,6 +86,13 @@ export class Level {
     const index = this.platforms.indexOf(platform)
     if (index > -1) {
       this.platforms.splice(index, 1)
+    }
+  }
+
+  public removePolygon(polygon: Polygon) {
+    const index = this.polygons.indexOf(polygon)
+    if (index > -1) {
+      this.polygons.splice(index, 1)
     }
   }
 

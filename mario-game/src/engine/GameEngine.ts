@@ -5,6 +5,8 @@ import { InputManager } from './input/InputManager'
 import { Camera } from './render/Camera'
 import { Level } from './level/Level'
 import { Player } from './entities/Player'
+import { Platform } from './level/Platform'
+import { Entity } from './entities/Entity'
 
 export interface GameConfig {
   width?: number
@@ -184,11 +186,19 @@ export class GameEngine {
   private checkCollisions() {
     const entities = this.entityManager.getEntities()
     const platforms = this.currentLevel?.getPlatforms() || []
+    const polygons = this.currentLevel?.getPolygons() || []
 
     // Check entity vs platform collisions
     entities.forEach(entity => {
       platforms.forEach(platform => {
         this.physics.checkPlatformCollision(entity, platform)
+      })
+    })
+
+    // Check entity vs polygon collisions
+    entities.forEach(entity => {
+      polygons.forEach(polygon => {
+        this.physics.checkPolygonCollision(entity, polygon)
       })
     })
 

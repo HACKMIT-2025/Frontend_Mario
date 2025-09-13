@@ -10,6 +10,10 @@ export interface LevelData {
     height: number
     type?: string
   }>
+  polygons: Array<{
+    contours: number[][]
+    type?: string
+  }>
   enemies: Array<{
     x: number
     y: number
@@ -34,6 +38,7 @@ export class LevelBuilder {
   private engine: GameEngine
   private levelData: LevelData = {
     platforms: [],
+    polygons: [],
     enemies: [],
     coins: [],
     powerUps: [],
@@ -48,6 +53,7 @@ export class LevelBuilder {
   public clear(): this {
     this.levelData = {
       platforms: [],
+      polygons: [],
       enemies: [],
       coins: [],
       powerUps: [],
@@ -58,6 +64,11 @@ export class LevelBuilder {
 
   public addPlatform(x: number, y: number, width: number, height: number, type = 'normal'): this {
     this.levelData.platforms.push({ x, y, width, height, type })
+    return this
+  }
+
+  public addPolygon(contours: number[][], type = 'polygon'): this {
+    this.levelData.polygons.push({ contours, type })
     return this
   }
 
@@ -122,6 +133,11 @@ export class LevelBuilder {
     // Add platforms
     this.levelData.platforms.forEach(p => {
       level.addPlatform(p.x, p.y, p.width, p.height, p.type)
+    })
+
+    // Add polygons
+    this.levelData.polygons.forEach(p => {
+      level.addPolygon(p.contours, p.type)
     })
 
     // Add coins

@@ -69,6 +69,37 @@ export class Renderer {
     platforms.forEach(platform => {
       this.renderPlatform(platform)
     })
+
+    // Render polygons
+    const polygons = level.getPolygons()
+    polygons.forEach(polygon => {
+      this.renderPolygon(polygon)
+    })
+  }
+
+  private renderPolygon(polygon: any) {
+    this.ctx.save()
+
+    // Set polygon style
+    this.ctx.fillStyle = '#666666' // Gray for now, can be customized
+    this.ctx.strokeStyle = '#444444'
+    this.ctx.lineWidth = 2
+
+    // Draw polygon
+    this.ctx.beginPath()
+    const contours = polygon.contours
+    if (contours.length > 0) {
+      this.ctx.moveTo(contours[0][0], contours[0][1])
+      for (let i = 1; i < contours.length; i++) {
+        this.ctx.lineTo(contours[i][0], contours[i][1])
+      }
+      this.ctx.closePath()
+    }
+
+    this.ctx.fill()
+    this.ctx.stroke()
+
+    this.ctx.restore()
   }
 
   private renderPlatform(platform: any) {

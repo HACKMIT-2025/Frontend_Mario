@@ -55,6 +55,15 @@ export class GameAPI {
   }
 
   /**
+   * Add a polygon to the level
+   */
+  addPolygon(contours: number[][], type = 'polygon'): this {
+    this.builder.addPolygon(contours, type)
+    this.log(`Polygon added with ${contours.length} vertices`)
+    return this
+  }
+
+  /**
    * Add an enemy to the level
    */
   addEnemy(x: number, y: number, type = 'goomba'): this {

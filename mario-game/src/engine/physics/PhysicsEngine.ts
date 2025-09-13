@@ -1,5 +1,6 @@
 import { Entity } from '../entities/Entity'
 import { Platform } from '../level/Platform'
+import { Polygon } from '../level/Polygon'
 
 export interface Vector2D {
   x: number
@@ -61,6 +62,34 @@ export class PhysicsEngine {
 
     if (this.isColliding(entityBox, platformBox)) {
       this.resolvePlatformCollision(entity, platform, entityBox, platformBox)
+      return true
+    }
+
+    return false
+  }
+
+  public checkPolygonCollision(entity: Entity, polygon: Polygon): boolean {
+    if (!entity.physics || !entity.physics.solid) return false
+
+    const entityBox = this.getAABB(entity)
+    const polygonBounds = polygon.getBounds()
+
+    // Convert polygon bounds to AABB format
+    const polygonAABB = {
+      x: polygonBounds.left,
+      y: polygonBounds.top,
+      width: polygonBounds.right - polygonBounds.left,
+      height: polygonBounds.bottom - polygonBounds.top
+    }
+
+    // Quick AABB check first
+    if (!this.isColliding(entityBox, polygonAABB)) {
+      return false
+    }
+
+    // More precise collision check
+    if (this.polygonIntersectsAABB(polygon, entityBox)) {
+      this.resolvePolygonCollision(entity, polygon, entityBox)
       return true
     }
 
@@ -131,6 +160,126 @@ export class PhysicsEngine {
       y: obj.position?.y || obj.y,
       width: obj.width,
       height: obj.height
+    }
+  }
+
+  private polygonIntersectsAABB(polygon: Polygon, box: AABB): boolean {
+    // Check if any point of the polygon is inside the AABB
+    for (const point of polygon.contours) {
+      const x = point[0]
+      const y = point[1]
+      if (x >= box.x && x <= box.x + box.width &&
+          y >= box.y && y <= box.y + box.height) {
+        return true
+      }
+    }
+
+    // Check if any point of the AABB is inside the polygon
+    const corners = [
+      [box.x, box.y],
+      [box.x + box.width, box.y],
+      [box.x + box.width, box.y + box.height],
+      [box.x, box.y + box.height]
+    ]
+
+    for (const corner of corners) {
+      if (polygon.contains(corner[0], corner[1])) {
+        return true
+      }
+    }
+
+    // Check if any polygon edge intersects any AABB edge
+    const polygonSegments = polygon.getSegments()
+    const boxSegments = [
+      { x1: box.x, y1: box.y, x2: box.x + box.width, y2: box.y },
+      { x1: box.x + box.width, y1: box.y, x2: box.x + box.width, y2: box.y + box.height },
+      { x1: box.x + box.width, y1: box.y + box.height, x2: box.x, y2: box.y + box.height },
+      { x1: box.x, y1: box.y + box.height, x2: box.x, y2: box.y }
+    ]
+
+    for (const polySeg of polygonSegments) {
+      for (const boxSeg of boxSegments) {
+        if (this.lineSegmentsIntersect(polySeg, boxSeg)) {
+          return true
+        }
+      }
+    }
+
+    return false
+  }
+
+  private lineSegmentsIntersect(seg1: any, seg2: any): boolean {
+    const { x1: x1, y1: y1, x2: x2, y2: y2 } = seg1
+    const { x1: x3, y1: y3, x2: x4, y2: y4 } = seg2
+
+    const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    if (Math.abs(denom) < 0.0001) return false
+
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+    const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom
+
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1
+  }
+
+  private resolvePolygonCollision(entity: Entity, polygon: Polygon, entityBox: AABB) {
+    // Find the closest polygon edge to push the entity away from
+    const segments = polygon.getSegments()
+    let minDistance = Infinity
+    let closestEdge = null
+    let pushDirection = { x: 0, y: 0 }
+
+    for (const segment of segments) {
+      const closestPoint = this.closestPointOnSegment(
+        entityBox.x + entityBox.width / 2,
+        entityBox.y + entityBox.height / 2,
+        segment
+      )
+
+      const dx = (entityBox.x + entityBox.width / 2) - closestPoint.x
+      const dy = (entityBox.y + entityBox.height / 2) - closestPoint.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance < minDistance) {
+        minDistance = distance
+        closestEdge = segment
+        if (distance > 0) {
+          pushDirection = { x: dx / distance, y: dy / distance }
+        }
+      }
+    }
+
+    if (closestEdge && minDistance < Math.max(entityBox.width, entityBox.height) / 2) {
+      // Push entity away from polygon
+      const pushDistance = 1
+      entity.position.x += pushDirection.x * pushDistance
+      entity.position.y += pushDirection.y * pushDistance
+
+      // Stop velocity in the direction of collision
+      const dotProduct = entity.velocity.x * pushDirection.x + entity.velocity.y * pushDirection.y
+      if (dotProduct < 0) {
+        entity.velocity.x -= dotProduct * pushDirection.x
+        entity.velocity.y -= dotProduct * pushDirection.y
+      }
+
+      // Check if entity is landing on top of polygon
+      if (Math.abs(pushDirection.y) > 0.7 && pushDirection.y < 0) {
+        entity.grounded = true
+      }
+    }
+  }
+
+  private closestPointOnSegment(px: number, py: number, segment: any) {
+    const { x1, y1, x2, y2 } = segment
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const length = Math.sqrt(dx * dx + dy * dy)
+
+    if (length === 0) return { x: x1, y: y1 }
+
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (length * length)))
+    return {
+      x: x1 + t * dx,
+      y: y1 + t * dy
     }
   }
 

@@ -26,6 +26,7 @@ export { EntityManager } from './entities/EntityManager'
 // Level Components
 export { Level } from './level/Level'
 export { Platform } from './level/Platform'
+export { Polygon } from './level/Polygon'
 
 // Rendering
 export { Renderer } from './render/Renderer'

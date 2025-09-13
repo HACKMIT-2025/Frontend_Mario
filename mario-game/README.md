@@ -80,6 +80,29 @@ gameAPI.addPlatform(0, 500, 1000, 76, 'ground');
 gameAPI.addPlatform(300, 400, 100, 20, 'platform');
 ```
 
+#### `addPolygon(contours, type)`
+Adds a polygon-shaped rigid body to the level.
+
+**Parameters:**
+- `contours` (number[][]): Array of [x, y] points in world coordinates, forming a closed shape
+- `type` (string): Polygon type ('polygon' - currently only one type supported)
+
+**Returns:** `this` (for method chaining)
+
+**Example:**
+```javascript
+// Create a triangle
+gameAPI.addPolygon([[200, 400], [300, 400], [250, 450]]);
+
+// Create a pentagon
+const pentagon = [[450, 350], [500, 380], [480, 430], [420, 430], [400, 380]];
+gameAPI.addPolygon(pentagon);
+
+// Create a complex shape
+const shape = [[600, 300], [650, 280], [700, 300], [680, 350], [650, 370], [620, 350]];
+gameAPI.addPolygon(shape);
+```
+
 #### `addEnemy(x, y, type)`
 Adds an enemy to the level.
 
@@ -515,7 +538,35 @@ gameAPI
     .startGame();
 ```
 
-### Example 5: Level Import/Export
+### Example 5: Using Polygons for Complex Shapes
+```javascript
+const gameAPI = new GameAPI('game-canvas');
+
+// Build a level with polygon obstacles
+gameAPI
+    .clearLevel()
+    .addPlatform(0, 500, 1000, 76, 'ground')
+
+    // Add triangular obstacle
+    .addPolygon([[300, 450], [360, 450], [330, 490]])
+
+    // Add pentagonal platform
+    .addPolygon([[500, 380], [550, 410], [530, 460], [470, 460], [450, 410]])
+
+    // Add hexagonal challenge
+    .addPolygon([[750, 320], [820, 320], [850, 370], [820, 420], [750, 420], [720, 370]])
+
+    // Add traditional elements
+    .addCoin(350, 350)
+    .addCoin(550, 300)
+    .addCoin(800, 250)
+    .addEnemy(400, 450, 'goomba')
+    .setPlayerStart(100, 400)
+    .buildLevel()
+    .startGame();
+```
+
+### Example 6: Level Import/Export
 ```javascript
 // Save current level
 const levelJSON = gameAPI.exportJSON();

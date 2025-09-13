@@ -69,5 +69,25 @@ GameAPI.generateFromImageData(imageData)
 `)
 
 // Load custom level based on level_data.json
-loadCustomLevel(gameAPI.engine)
-gameAPI.startGame()
+gameAPI.clearLevel()
+    .setPlayerStart(100, 400)
+    .addPlatform(0, 500, 1024, 76, 'ground'); // Ground platform
+
+// Test 1: Simple triangle
+const triangle = [[0, 500], [100, 0], [50, 50]];
+gameAPI.addPolygon(triangle);
+
+// Test 2: Pentagon
+const pentagon = [[50, 0], [100, 30], [80, 80], [20, 80], [0, 30]];
+gameAPI.addPolygon(pentagon);
+
+// Test 3: Hexagon
+const hexagon = [[30, 0], [90, 0], [120, 50], [90, 100], [30, 100], [0, 50]];
+gameAPI.addPolygon(hexagon);
+
+// Add some coins for interaction testing
+gameAPI.addCoin(250, 350)
+        .addCoin(450, 300)
+        .addCoin(650, 250);
+// loadCustomLevel(gameAPI.getEngine())
+gameAPI.buildLevel().startGame()
