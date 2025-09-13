@@ -14,10 +14,10 @@ export function loadCustomLevel(engine: GameEngine): void {
   // 基于 rigid_bodies 第二个大型刚体的轮廓数据构建地形
 
   // 左侧起始地面 (Mario 经典绿色地面)
-  builder.addPlatform(0, 500, 280, 76, 'ground')
+  builder.addPlatform(0, 500, 280, 76, 'platform')
 
   // 左侧山丘平台 (基于轮廓点 [280, 168] 区域)
-  builder.addPlatform(280, 400, 100, 100, 'ground')
+  builder.addPlatform(280, 400, 100, 100, 'platform')
 
   // 中央浮空砖块平台 (Mario 经典砖块)
   builder.addBlock(320, 350, 'brick')
@@ -27,7 +27,7 @@ export function loadCustomLevel(engine: GameEngine): void {
   builder.addBlock(448, 350, 'brick')
 
   // 中央大平台 (基于轮廓数据 [450-460, 300-400] 区域)
-  builder.addPlatform(400, 450, 120, 50, 'ground')
+  builder.addPlatform(400, 450, 120, 50, 'platform')
 
   // 右侧阶梯式平台 (Mario 经典阶梯设计)
   builder.addPlatform(550, 480, 64, 32, 'brick')
@@ -40,7 +40,7 @@ export function loadCustomLevel(engine: GameEngine): void {
   builder.addPlatform(820, 250, 100, 20, 'platform')
 
   // 终点区域平台 (基于 end_points: [910, 159])
-  builder.addPlatform(880, 400, 120, 76, 'ground')
+  builder.addPlatform(880, 400, 120, 76, 'platform')
 
   // === 终点城堡旗杆 ===
   // 在 [910, 159] 位置创建目标管道

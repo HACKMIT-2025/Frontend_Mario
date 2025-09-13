@@ -1,4 +1,6 @@
 import { Entity } from './Entity'
+import { SpriteLoader } from '../sprites/SpriteLoader'
+import { AnimationController, AnimationPresets } from '../sprites/Animation'
 
 export type PlayerSize = 'small' | 'big'
 export type PlayerState = 'idle' | 'running' | 'jumping' | 'falling'
@@ -10,8 +12,8 @@ export class Player extends Entity {
   public fireballEnabled = false
 
   private invulnerableTime = 0
-  private animationFrame = 0
-  private animationTimer = 0
+  private animationController: AnimationController
+  private spriteLoader: SpriteLoader
   private facing: 'left' | 'right' = 'right'
 
   private jumpPower = 12
@@ -22,9 +24,25 @@ export class Player extends Entity {
   constructor(x: number, y: number) {
     super(x, y, 32, 32, 'player')
     this.setPhysics({ solid: true, gravity: true, mass: 1 })
+
+    // Initialize sprite system
+    this.spriteLoader = SpriteLoader.getInstance()
+    this.animationController = new AnimationController()
+
+    // Setup animations for different directions
+    this.animationController.addAnimation('idle_right', AnimationPresets.createPlayerIdleRightAnimation())
+    this.animationController.addAnimation('idle_left', AnimationPresets.createPlayerIdleLeftAnimation())
+    this.animationController.addAnimation('running_right', AnimationPresets.createPlayerRunRightAnimation())
+    this.animationController.addAnimation('running_left', AnimationPresets.createPlayerRunLeftAnimation())
+    this.animationController.addAnimation('jumping', AnimationPresets.createPlayerJumpAnimation())
+
+    // Start with idle animation facing right
+    this.animationController.playAnimation('idle_right')
   }
 
   public update(dt: number) {
+    const previousState = this.state
+
     // Update state based on velocity
     if (this.velocity.y < -0.5) {
       this.state = 'jumping'
@@ -36,12 +54,30 @@ export class Player extends Entity {
       this.state = 'idle'
     }
 
-    // Update animation
-    this.animationTimer += dt
-    if (this.animationTimer > 0.1) {
-      this.animationFrame = (this.animationFrame + 1) % 8
-      this.animationTimer = 0
+    // Update animation based on state change or facing direction
+    const currentAnimName = this.animationController.getCurrentAnimationName()
+    let newAnimName = ''
+
+    switch (this.state) {
+      case 'idle':
+        newAnimName = this.facing === 'left' ? 'idle_left' : 'idle_right'
+        break
+      case 'running':
+        newAnimName = this.facing === 'left' ? 'running_left' : 'running_right'
+        break
+      case 'jumping':
+      case 'falling':
+        newAnimName = 'jumping'
+        break
     }
+
+    // Only change animation if it's different from current
+    if (currentAnimName !== newAnimName) {
+      this.animationController.playAnimation(newAnimName)
+    }
+
+    // Update animations
+    this.animationController.update(dt)
 
     // Update invulnerability
     if (this.invulnerable && this.invulnerableTime > 0) {
@@ -64,22 +100,73 @@ export class Player extends Entity {
       ctx.globalAlpha = 0.5
     }
 
-    // Draw player (placeholder rectangle, will be replaced with sprites)
-    ctx.fillStyle = this.size === 'big' ? '#FF0000' : '#FF6B6B'
+    // Get current animation frame
+    const frameIndex = this.animationController.getCurrentFrame()
+    // Keep aspect ratio similar to sprite (64x96), but scale to game size
+    const height = this.size === 'big' ? 48 : 32
+    const width = this.size === 'big' ? 32 : 21
 
+    // Apply color tint for power-ups
     if (this.fireballEnabled) {
-      ctx.fillStyle = '#FFA500' // Orange when fire power
+      ctx.filter = 'hue-rotate(30deg) saturate(1.2)' // Orange tint
+    } else if (this.size === 'big') {
+      ctx.filter = 'hue-rotate(0deg)' // Keep original colors
     }
 
-    const height = this.size === 'big' ? 64 : 32
+    // Get current sprite name based on animation
+    const currentAnimName = this.animationController.getCurrentAnimationName()
+    let spriteName = 'player_idle_right' // default fallback
 
-    ctx.fillRect(this.position.x, this.position.y, this.width, height)
+    // Map animation names to sprite names
+    switch (currentAnimName) {
+      case 'idle_left':
+        spriteName = 'player_idle_left'
+        break
+      case 'idle_right':
+        spriteName = 'player_idle_right'
+        break
+      case 'running_left':
+        // Alternate between two running sprites
+        const leftFrame = this.animationController.getCurrentFrame()
+        spriteName = leftFrame === 0 ? 'player_run_left_01' : 'player_run_left_02'
+        break
+      case 'running_right':
+        // Alternate between two running sprites
+        const rightFrame = this.animationController.getCurrentFrame()
+        spriteName = rightFrame === 0 ? 'player_run_right_01' : 'player_run_right_02'
+        break
+      case 'jumping':
+        spriteName = 'player_jump'
+        break
+    }
 
-    // Draw eyes to show direction
-    ctx.fillStyle = '#FFFFFF'
-    const eyeOffset = this.facing === 'right' ? 20 : 5
-    ctx.fillRect(this.position.x + eyeOffset, this.position.y + 8, 4, 4)
-    ctx.fillRect(this.position.x + eyeOffset, this.position.y + 16, 4, 4)
+    // Try to draw sprite, fallback to rectangle if failed
+    const spriteDrawn = this.spriteLoader.drawSprite(
+      ctx,
+      spriteName,
+      0, // Always use frame 0 since each sprite is a complete image
+      this.position.x,
+      this.position.y,
+      width,
+      height,
+      false // No need to flip since we have separate left/right sprites
+    )
+
+    if (!spriteDrawn) {
+      // Fallback to original rectangle rendering
+      ctx.fillStyle = this.size === 'big' ? '#FF0000' : '#FF6B6B'
+      if (this.fireballEnabled) {
+        ctx.fillStyle = '#FFA500' // Orange when fire power
+      }
+
+      ctx.fillRect(this.position.x, this.position.y, width, height)
+
+      // Draw eyes to show direction
+      ctx.fillStyle = '#FFFFFF'
+      const eyeOffset = this.facing === 'right' ? width - 12 : 5
+      ctx.fillRect(this.position.x + eyeOffset, this.position.y + 8, 4, 4)
+      ctx.fillRect(this.position.x + eyeOffset, this.position.y + 16, 4, 4)
+    }
 
     ctx.restore()
   }

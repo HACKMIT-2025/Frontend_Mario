@@ -157,7 +157,7 @@ export class GameAPI {
    * Generate ground
    */
   generateGround(startX: number, endX: number, y: number): this {
-    this.addPlatform(startX, y, endX - startX, 76, 'ground')
+    this.addPlatform(startX, y, endX - startX, 76, 'platform')
     return this
   }
 
@@ -248,8 +248,8 @@ export class GameAPI {
   /**
    * Start the game
    */
-  startGame(): this {
-    this.engine.start()
+  async startGame(): Promise<this> {
+    await this.engine.start()
     this.log('Game started')
     return this
   }
@@ -365,8 +365,8 @@ export class GameAPI {
    */
   loadSkyLevel(): this {
     return this.clearLevel()
-      .addPlatform(0, 550, 200, 50, 'ground')
-      .addPlatform(2800, 550, 200, 50, 'ground')
+      .addPlatform(0, 550, 200, 50, 'platform')
+      .addPlatform(2800, 550, 200, 50, 'platform')
       .generatePlatforms(20, 200, 400, 130, 100)
       .addEnemy(500, 300, 'firebar')
       .addEnemy(1000, 250, 'firebar')
