@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+    <style>
+        body {
+            background: #5C94FC;
+            font-family: monospace;
+            padding: 20px;
+        }
+        .test-section {
+            background: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        #console {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mario Engine Debug Test</h1>
+
+    <div class="test-section">
+        <h2>Test Simple API Version</h2>
+        <button onclick="testSimpleAPI()">Test Simple API</button>
+        <button onclick="window.open('http://localhost:5174/mario-api-engine.html')">Open Simple Version</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test WebGL Engine Version</h2>
+        <button onclick="testWebGLEngine()">Test WebGL Engine</button>
+        <button onclick="window.open('http://localhost:5174/webgl-engine-game.html')">Open WebGL Version</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Direct Main.ts Test</h2>
+        <button onclick="window.open('http://localhost:5174/')">Open Main.ts Direct</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Console Output</h2>
+        <div id="console"></div>
+    </div>
+
+    <script>
+        function log(msg) {
+            const console = document.getElementById('console');
+            const time = new Date().toLocaleTimeString();
+            console.innerHTML += `[${time}] ${msg}<br>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function testSimpleAPI() {
+            log('Testing Simple API version...');
+
+            // Try to load the simple version in an iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = 'http://localhost:5174/mario-api-engine.html';
+            iframe.width = 1024;
+            iframe.height = 600;
+            iframe.onload = () => {
+                log('Simple API loaded successfully');
+
+                // Try to access the API
+                setTimeout(() => {
+                    try {
+                        const api = iframe.contentWindow.MarioAPI;
+                        if (api) {
+                            log('✅ MarioAPI found');
+                            log('Available methods: ' + Object.keys(api).join(', '));
+                        } else {
+                            log('❌ MarioAPI not found');
+                        }
+                    } catch (e) {
+                        log('❌ Error accessing API: ' + e.message);
+                    }
+                }, 1000);
+            };
+            iframe.onerror = () => {
+                log('❌ Failed to load Simple API');
+            };
+
+            document.body.appendChild(iframe);
+        }
+
+        function testWebGLEngine() {
+            log('Testing WebGL Engine version...');
+
+            // Try to load the WebGL version
+            const iframe = document.createElement('iframe');
+            iframe.src = 'http://localhost:5174/webgl-engine-game.html';
+            iframe.width = 1024;
+            iframe.height = 600;
+            iframe.onload = () => {
+                log('WebGL Engine loaded successfully');
+
+                // Try to access the API
+                setTimeout(() => {
+                    try {
+                        const api = iframe.contentWindow.GameAPI;
+                        if (api) {
+                            log('✅ GameAPI found');
+                            log('Engine: ' + (api.engine ? 'OK' : 'Missing'));
+                            log('Builder: ' + (api.builder ? 'OK' : 'Missing'));
+                        } else {
+                            log('❌ GameAPI not found');
+                        }
+                    } catch (e) {
+                        log('❌ Error accessing API: ' + e.message);
+                    }
+                }, 2000);
+            };
+            iframe.onerror = () => {
+                log('❌ Failed to load WebGL Engine');
+            };
+
+            document.body.appendChild(iframe);
+        }
+
+        log('Debug test page loaded');
+    </script>
+</body>
+</html>

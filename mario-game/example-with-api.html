@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Game - Using Engine API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #5C94FC, #87CEEB);
+            font-family: 'Courier New', monospace;
+        }
+
+        #app {
+            text-align: center;
+        }
+
+        #control-panel {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1024px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: #2196F3;
+        }
+
+        .btn-primary:hover {
+            background: #0976d2;
+        }
+
+        .btn-danger {
+            background: #f44336;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        #code-example {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 12px;
+            max-width: 1024px;
+            overflow-x: auto;
+        }
+
+        #code-example h3 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        pre {
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="control-panel">
+            <button class="btn-primary" onclick="loadClassic()">Classic Level</button>
+            <button class="btn-primary" onclick="loadUnderground()">Underground</button>
+            <button class="btn-primary" onclick="loadSky()">Sky Level</button>
+            <button class="btn-primary" onclick="loadRandom()">Random Level</button>
+            <button onclick="testChainAPI()">Test Chain API</button>
+            <button onclick="testImageData()">Test AI Data</button>
+            <button class="btn-danger" onclick="clearLevel()">Clear</button>
+            <button class="btn-danger" onclick="resetGame()">Reset</button>
+        </div>
+
+        <div id="game-container"></div>
+
+        <div id="code-example">
+            <h3>API Usage Example:</h3>
+            <pre id="code-display">// Click a button to see the API code</pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GameAPI } from './src/engine/index.ts';
+
+        // Initialize the game API
+        const gameAPI = new GameAPI('game-canvas', {
+            width: 1024,
+            height: 576,
+            gravity: 0.5,
+            fps: 60
+        });
+
+        // Make it globally available
+        window.GameAPI = gameAPI;
+
+        // Display code function
+        function showCode(code) {
+            document.getElementById('code-display').textContent = code;
+        }
+
+        // Level loading functions
+        window.loadClassic = function() {
+            gameAPI.loadClassicLevel().startGame();
+            showCode(`// Load Classic Level
+GameAPI.loadClassicLevel()
+    .startGame();
+
+// Or build it manually:
+GameAPI.clearLevel()
+    .generateGround(0, 3000, 500)
+    .addPlatform(300, 400, 100, 20)
+    .addPipe(900, 400)
+    .addCoinRow(320, 350, 5)
+    .addEnemy(400, 450, 'goomba')
+    .addPowerUp(550, 300, 'mushroom')
+    .setPlayerStart(100, 400)
+    .buildLevel()
+    .startGame();`);
+        };
+
+        window.loadUnderground = function() {
+            gameAPI.loadUndergroundLevel().startGame();
+            showCode(`// Load Underground Level
+GameAPI.loadUndergroundLevel()
+    .startGame();
+
+// Features underground theme with pipes and enclosed space`);
+        };
+
+        window.loadSky = function() {
+            gameAPI.loadSkyLevel().startGame();
+            showCode(`// Load Sky Level
+GameAPI.loadSkyLevel()
+    .startGame();
+
+// Features floating platforms and minimal ground`);
+        };
+
+        window.loadRandom = function() {
+            gameAPI.generateRandomLevel().startGame();
+            showCode(`// Generate Random Level
+GameAPI.generateRandomLevel()
+    .startGame();
+
+// Procedurally generates platforms, enemies, and items`);
+        };
+
+        window.testChainAPI = function() {
+            // Test method chaining
+            gameAPI
+                .clearLevel()
+                .generateGround(0, 2000, 500)
+                .addPlatformStairs(200, 500, 5)
+                .addGapWithPlatforms(600, 350, 400, 3)
+                .addCoinRow(650, 300, 5)
+                .addCoinRow(770, 300, 5)
+                .addCoinRow(890, 300, 5)
+                .addPipe(1200, 400)
+                .addEnemy(300, 450, 'goomba')
+                .addEnemy(800, 450, 'koopa')
+                .addPowerUp(1000, 300, 'star')
+                .setPlayerStart(100, 400)
+                .buildLevel()
+                .startGame();
+
+            showCode(`// Method Chaining Example
+GameAPI
+    .clearLevel()
+    .generateGround(0, 2000, 500)
+    .addPlatformStairs(200, 500, 5)
+    .addGapWithPlatforms(600, 350, 400, 3)
+    .addCoinRow(650, 300, 5)
+    .addPipe(1200, 400)
+    .addEnemy(300, 450, 'goomba')
+    .addPowerUp(1000, 300, 'star')
+    .setPlayerStart(100, 400)
+    .buildLevel()
+    .startGame();`);
+        };
+
+        window.testImageData = function() {
+            // Simulate AI/image recognition data
+            const imageData = [
+                { type: 'ground', x: 0, y: 500, width: 2000, height: 76 },
+                { type: 'platform', x: 300, y: 400, width: 100, height: 20 },
+                { type: 'platform', x: 500, y: 350, width: 100, height: 20 },
+                { type: 'pipe', x: 700, y: 400, width: 64, height: 100 },
+                { type: 'coin', x: 350, y: 350 },
+                { type: 'coin', x: 550, y: 300 },
+                { type: 'enemy', x: 400, y: 450, enemyType: 'goomba' },
+                { type: 'powerup', x: 600, y: 300, powerType: 'mushroom' },
+                { type: 'player', x: 100, y: 400 }
+            ];
+
+            gameAPI.generateFromImageData(imageData).startGame();
+
+            showCode(`// Generate from AI/Image Recognition Data
+const imageData = [
+    { type: 'ground', x: 0, y: 500, width: 2000, height: 76 },
+    { type: 'platform', x: 300, y: 400, width: 100, height: 20 },
+    { type: 'pipe', x: 700, y: 400, width: 64, height: 100 },
+    { type: 'coin', x: 350, y: 350 },
+    { type: 'enemy', x: 400, y: 450, enemyType: 'goomba' },
+    { type: 'powerup', x: 600, y: 300, powerType: 'mushroom' },
+    { type: 'player', x: 100, y: 400 }
+];
+
+GameAPI.generateFromImageData(imageData)
+    .startGame();`);
+        };
+
+        window.clearLevel = function() {
+            gameAPI.clearLevel();
+            showCode(`// Clear Level
+GameAPI.clearLevel();`);
+        };
+
+        window.resetGame = function() {
+            gameAPI.resetGame();
+            showCode(`// Reset Game
+GameAPI.resetGame();`);
+        };
+
+        // Load classic level on start
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                window.loadClassic();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

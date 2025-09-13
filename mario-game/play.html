@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Game - Playable Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #5C94FC, #87CEEB);
+            font-family: 'Courier New', monospace;
+        }
+
+        #game-container {
+            text-align: center;
+        }
+
+        #game-frame {
+            width: 1024px;
+            height: 576px;
+            border: 3px solid #333;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: white;
+        }
+
+        #controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 10px;
+            color: white;
+        }
+
+        .control-info {
+            display: inline-block;
+            margin: 0 15px;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+
+        #start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 100;
+        }
+
+        #start-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        .btn {
+            margin: 5px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            background: #FF5252;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-secondary {
+            background: #4CAF50;
+        }
+
+        .btn-secondary:hover {
+            background: #45a049;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #level-buttons {
+            margin-top: 20px;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+
+        .info-panel h3 {
+            margin-bottom: 10px;
+            color: #FFD700;
+        }
+
+        .info-panel ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-panel li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <h1>🎮 Super Mario Runner</h1>
+            <div id="level-buttons">
+                <button class="btn" onclick="startLevel1()">Level 1 - Classic</button>
+                <button class="btn" onclick="startLevel2()">Level 2 - Underground</button>
+                <button class="btn" onclick="startLevel3()">Level 3 - Sky High</button>
+                <button class="btn btn-secondary" onclick="startEndless()">Endless Mode</button>
+            </div>
+        </div>
+
+        <div class="info-panel hidden" id="info-panel">
+            <h3>Game Info</h3>
+            <ul>
+                <li>🏃 Use arrow keys to move</li>
+                <li>🦘 Press SPACE to jump</li>
+                <li>⚡ Hold SHIFT to run</li>
+                <li>⏸️ Press P to pause</li>
+                <li>🔄 Press R to restart</li>
+            </ul>
+        </div>
+
+        <iframe id="game-frame" src="http://localhost:5174" style="border: none;"></iframe>
+
+        <div id="controls">
+            <div class="control-info">⬅️➡️ Move</div>
+            <div class="control-info">SPACE Jump</div>
+            <div class="control-info">SHIFT Run</div>
+            <div class="control-info">P Pause</div>
+            <div class="control-info">R Restart</div>
+        </div>
+    </div>
+
+    <script>
+        let gameWindow;
+        let api;
+        let currentLevel = null;
+        let apiReady = false;
+
+        // 等待游戏加载
+        function initAPI() {
+            try {
+                gameWindow = document.getElementById('game-frame').contentWindow;
+                api = gameWindow.MarioGameAPI;
+
+                if (api && api.builder && api.engine) {
+                    apiReady = true;
+                    console.log('✅ Game API loaded successfully:', api);
+                    // 显示成功消息
+                    document.getElementById('start-screen').style.opacity = '1';
+                } else {
+                    console.log('⏳ API not ready yet, retrying...');
+                    setTimeout(initAPI, 500);
+                }
+            } catch (e) {
+                console.error('❌ Error loading API:', e);
+                // 如果有跨域问题，尝试直接访问游戏页面
+                alert('请直接访问 http://localhost:5174 并在浏览器控制台中运行关卡代码');
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            console.log('Page loaded, waiting for game to initialize...');
+            setTimeout(initAPI, 1500);
+        });
+
+        function hideStartScreen() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('info-panel').classList.remove('hidden');
+        }
+
+        function startLevel1() {
+            if (!apiReady || !api) {
+                alert('Game is still loading, please wait a moment and try again...\n\nIf this persists, please open http://localhost:5174 directly.');
+                initAPI(); // 尝试重新初始化
+                return;
+            }
+
+            console.log('Starting Level 1...');
+
+            hideStartScreen();
+            api.clearLevel();
+
+            // Level 1 - Classic Mario Level
+            // 地面
+            api.addPlatform(0, 500, 3000, 76, 'ground');
+
+            // 开始区域
+            api.addPlatform(200, 400, 100, 20, 'platform');
+            api.addPlatform(350, 350, 100, 20, 'platform');
+
+            // 金币路径
+            for (let i = 0; i < 8; i++) {
+                api.addCoin(220 + i * 40, 300);
+            }
+
+            // 第一批敌人
+            api.addEnemy(400, 450, 'goomba');
+            api.addEnemy(600, 450, 'goomba');
+
+            // 管道跳跃挑战
+            api.addPlatform(700, 400, 64, 100, 'pipe');
+            api.addPlatform(850, 350, 64, 150, 'pipe');
+            api.addPlatform(1000, 400, 64, 100, 'pipe');
+
+            // 空中金币
+            for (let i = 0; i < 5; i++) {
+                api.addCoin(750 + i * 60, 250);
+            }
+
+            // 阶梯
+            for (let i = 0; i < 5; i++) {
+                api.addPlatform(1200 + i * 32, 500 - i * 32, 32 * (5 - i), 32, 'brick');
+            }
+
+            // 问号方块区域
+            api.addPlatform(1500, 350, 32, 32, 'question');
+            api.addPlatform(1540, 350, 32, 32, 'question');
+            api.addPlatform(1580, 350, 32, 32, 'question');
+            api.addPowerUp(1500, 318, 'mushroom');
+            api.addPowerUp(1540, 318, 'flower');
+            api.addCoin(1580, 318);
+
+            // 敌人挑战区
+            api.addEnemy(1700, 450, 'koopa');
+            api.addEnemy(1800, 450, 'goomba');
+            api.addEnemy(1900, 450, 'goomba');
+
+            // 跳跃挑战
+            api.addPlatform(2000, 400, 80, 20, 'platform');
+            api.addPlatform(2150, 350, 80, 20, 'platform');
+            api.addPlatform(2300, 300, 80, 20, 'platform');
+            api.addPlatform(2450, 250, 80, 20, 'platform');
+
+            // 最终奖励
+            api.addPowerUp(2500, 200, 'star');
+
+            // 终点
+            api.addPlatform(2600, 200, 64, 300, 'pipe');
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            currentLevel = 1;
+        }
+
+        function startLevel2() {
+            if (!api) {
+                alert('Game is still loading, please wait...');
+                return;
+            }
+
+            hideStartScreen();
+            api.clearLevel();
+
+            // Level 2 - Underground Adventure
+            // 地下地板和天花板
+            api.addPlatform(0, 550, 3000, 50, 'underground');
+            api.addPlatform(0, 0, 3000, 80, 'underground');
+
+            // 入口
+            api.addPlatform(100, 450, 64, 100, 'pipe');
+
+            // 地下迷宫
+            for (let i = 0; i < 8; i++) {
+                if (i % 2 === 0) {
+                    api.addPlatform(300 + i * 200, 450, 120, 100, 'underground');
+                    api.addCoin(360 + i * 200, 400);
+                } else {
+                    api.addPlatform(300 + i * 200, 180, 120, 100, 'underground');
+                    api.addCoin(360 + i * 200, 300);
+                }
+            }
+
+            // 移动平台区域
+            api.addPlatform(1900, 350, 80, 20, 'platform');
+            api.addPlatform(2050, 300, 80, 20, 'platform');
+            api.addPlatform(2200, 350, 80, 20, 'platform');
+
+            // 敌人
+            api.addEnemy(500, 500, 'goomba');
+            api.addEnemy(900, 500, 'koopa');
+            api.addEnemy(1300, 500, 'goomba');
+            api.addEnemy(1700, 500, 'koopa');
+
+            // 宝藏区域
+            for (let i = 0; i < 10; i++) {
+                api.addCoin(2300 + i * 30, 450);
+            }
+            api.addPowerUp(2450, 400, 'flower');
+
+            // 出口
+            api.addPlatform(2600, 450, 64, 100, 'pipe');
+
+            api.setPlayerStart(200, 450);
+            api.buildLevel();
+            api.startGame();
+
+            currentLevel = 2;
+        }
+
+        function startLevel3() {
+            if (!api) {
+                alert('Game is still loading, please wait...');
+                return;
+            }
+
+            hideStartScreen();
+            api.clearLevel();
+
+            // Level 3 - Sky High Challenge
+            // 只有少量地面
+            api.addPlatform(0, 550, 300, 50, 'ground');
+            api.addPlatform(2700, 550, 300, 50, 'ground');
+
+            // 云朵平台
+            const platforms = [
+                {x: 200, y: 450, w: 100},
+                {x: 350, y: 400, w: 80},
+                {x: 480, y: 350, w: 80},
+                {x: 610, y: 300, w: 80},
+                {x: 740, y: 250, w: 100},
+                {x: 890, y: 200, w: 80},
+                {x: 1020, y: 250, w: 80},
+                {x: 1150, y: 300, w: 100},
+                {x: 1300, y: 350, w: 80},
+                {x: 1430, y: 300, w: 80},
+                {x: 1560, y: 250, w: 100},
+                {x: 1710, y: 200, w: 80},
+                {x: 1840, y: 250, w: 80},
+                {x: 1970, y: 300, w: 100},
+                {x: 2120, y: 350, w: 80},
+                {x: 2250, y: 400, w: 80},
+                {x: 2380, y: 450, w: 100},
+                {x: 2530, y: 500, w: 80}
+            ];
+
+            platforms.forEach(p => {
+                api.addPlatform(p.x, p.y, p.w, 20, 'platform');
+                // 每个平台上有概率生成金币
+                if (Math.random() > 0.3) {
+                    api.addCoin(p.x + p.w/2, p.y - 50);
+                }
+            });
+
+            // 空中敌人
+            api.addEnemy(500, 300, 'firebar');
+            api.addEnemy(1000, 200, 'firebar');
+            api.addEnemy(1500, 200, 'firebar');
+            api.addEnemy(2000, 300, 'firebar');
+
+            // 奖励道具
+            api.addPowerUp(870, 150, 'mushroom');
+            api.addPowerUp(1690, 150, 'flower');
+            api.addPowerUp(2500, 450, 'star');
+
+            // 金币奖励线
+            for (let i = 0; i < 15; i++) {
+                api.addCoin(400 + i * 150, 150);
+            }
+
+            api.setPlayerStart(100, 450);
+            api.buildLevel();
+            api.startGame();
+
+            currentLevel = 3;
+        }
+
+        function startEndless() {
+            if (!api) {
+                alert('Game is still loading, please wait...');
+                return;
+            }
+
+            hideStartScreen();
+            api.clearLevel();
+
+            // Endless Mode - 程序生成的无限关卡
+            // 地面
+            api.addPlatform(0, 500, 5000, 76, 'ground');
+
+            // 随机生成平台、敌人和道具
+            for (let x = 200; x < 4800; x += 150 + Math.random() * 200) {
+                const r = Math.random();
+
+                if (r < 0.3) {
+                    // 平台
+                    const y = 350 + Math.random() * 100;
+                    const width = 80 + Math.random() * 40;
+                    api.addPlatform(x, y, width, 20, 'platform');
+
+                    // 平台上的金币
+                    if (Math.random() > 0.5) {
+                        api.addCoin(x + width/2, y - 50);
+                    }
+                } else if (r < 0.5) {
+                    // 管道
+                    const height = 100 + Math.random() * 100;
+                    api.addPlatform(x, 500 - height, 64, height, 'pipe');
+                } else if (r < 0.7) {
+                    // 砖块阶梯
+                    const steps = 3 + Math.floor(Math.random() * 3);
+                    for (let i = 0; i < steps; i++) {
+                        api.addPlatform(x + i * 32, 500 - i * 32, 32 * (steps - i), 32, 'brick');
+                    }
+                    x += steps * 32;
+                } else if (r < 0.85) {
+                    // 敌人
+                    const enemyTypes = ['goomba', 'koopa'];
+                    api.addEnemy(x, 450, enemyTypes[Math.floor(Math.random() * enemyTypes.length)]);
+                } else {
+                    // 道具
+                    const powerTypes = ['mushroom', 'flower', 'star'];
+                    const powerType = powerTypes[Math.floor(Math.random() * powerTypes.length)];
+                    api.addPlatform(x, 350, 32, 32, 'question');
+                    api.addPowerUp(x, 318, powerType);
+                }
+
+                // 金币线
+                if (Math.random() > 0.7) {
+                    for (let i = 0; i < 5; i++) {
+                        api.addCoin(x + i * 30, 250 + Math.random() * 50);
+                    }
+                }
+            }
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            currentLevel = 'endless';
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (currentLevel === 1) startLevel1();
+                else if (currentLevel === 2) startLevel2();
+                else if (currentLevel === 3) startLevel3();
+                else if (currentLevel === 'endless') startEndless();
+            }
+        });
+    </script>
+</body>
+</html>

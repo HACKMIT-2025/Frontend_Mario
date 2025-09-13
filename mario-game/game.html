@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Game - Direct Play</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #5C94FC, #87CEEB);
+            font-family: 'Courier New', monospace;
+        }
+
+        #control-panel {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            max-width: 1024px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-primary {
+            background: #2196F3;
+        }
+
+        .btn-primary:hover {
+            background: #0976d2;
+        }
+
+        .btn-danger {
+            background: #f44336;
+        }
+
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+
+        #status {
+            color: white;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 5px;
+            margin-left: auto;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 250px;
+        }
+
+        #instructions h3 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        #instructions ul {
+            list-style: none;
+            font-size: 14px;
+        }
+
+        #instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="instructions">
+        <h3>🎮 Controls</h3>
+        <ul>
+            <li>⬅️➡️ Arrow Keys - Move</li>
+            <li>⬆️ Up / Space - Jump</li>
+            <li>⬇️ Down - Crouch</li>
+            <li>⚡ Shift - Run</li>
+            <li>❌ X - Action</li>
+            <li>⏸️ P - Pause</li>
+        </ul>
+    </div>
+
+    <div id="control-panel">
+        <button class="btn btn-primary" onclick="loadLevel1()">Level 1</button>
+        <button class="btn btn-primary" onclick="loadLevel2()">Level 2</button>
+        <button class="btn btn-primary" onclick="loadLevel3()">Level 3</button>
+        <button class="btn" onclick="loadTestLevel()">Test Level</button>
+        <button class="btn" onclick="loadRandomLevel()">Random Level</button>
+        <button class="btn btn-danger" onclick="clearLevel()">Clear</button>
+        <button class="btn btn-danger" onclick="resetGame()">Reset</button>
+        <div id="status">Ready</div>
+    </div>
+
+    <div id="app"></div>
+
+    <!-- 加载游戏引擎 -->
+    <script type="module">
+        import './src/main.ts';
+
+        window.setStatus = function(text) {
+            document.getElementById('status').textContent = text;
+        }
+
+        // 等待API加载
+        setTimeout(() => {
+            if (window.MarioGameAPI) {
+                window.setStatus('✅ Game Ready');
+                console.log('Game API loaded successfully');
+            } else {
+                window.setStatus('❌ API Error');
+            }
+        }, 1000);
+
+        // Level 1 - Classic
+        window.loadLevel1 = function() {
+            if (!window.MarioGameAPI) {
+                alert('Game not loaded yet!');
+                return;
+            }
+
+            const api = window.MarioGameAPI;
+            window.setStatus('Loading Level 1...');
+
+            api.clearLevel();
+
+            // 地面
+            api.addPlatform(0, 500, 3000, 76, 'ground');
+
+            // 开始平台
+            for (let i = 0; i < 3; i++) {
+                api.addPlatform(200 + i * 150, 400 - i * 50, 100, 20, 'platform');
+            }
+
+            // 金币
+            for (let i = 0; i < 10; i++) {
+                api.addCoin(250 + i * 50, 300);
+            }
+
+            // 管道
+            api.addPlatform(800, 400, 64, 100, 'pipe');
+            api.addPlatform(1000, 350, 64, 150, 'pipe');
+
+            // 砖块阶梯
+            for (let i = 0; i < 5; i++) {
+                api.addPlatform(1200 + i * 32, 500 - i * 32, 32 * (5 - i), 32, 'brick');
+            }
+
+            // 问号方块
+            api.addPlatform(1500, 350, 32, 32, 'question');
+            api.addPlatform(1540, 350, 32, 32, 'question');
+            api.addPowerUp(1500, 318, 'mushroom');
+            api.addCoin(1540, 318);
+
+            // 敌人
+            api.addEnemy(400, 450, 'goomba');
+            api.addEnemy(600, 450, 'goomba');
+            api.addEnemy(1300, 450, 'koopa');
+
+            // 空中平台挑战
+            for (let i = 0; i < 5; i++) {
+                api.addPlatform(1700 + i * 120, 350 - Math.sin(i) * 50, 80, 20, 'platform');
+                api.addCoin(1740 + i * 120, 300 - Math.sin(i) * 50);
+            }
+
+            // 终点
+            api.addPlatform(2500, 200, 64, 300, 'pipe');
+            api.addPowerUp(2400, 150, 'star');
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            window.setStatus('Level 1 Loaded');
+        }
+
+        // Level 2 - Underground
+        window.loadLevel2 = function() {
+            if (!window.MarioGameAPI) {
+                alert('Game not loaded yet!');
+                return;
+            }
+
+            const api = window.MarioGameAPI;
+            window.setStatus('Loading Level 2...');
+
+            api.clearLevel();
+
+            // 地下环境
+            api.addPlatform(0, 550, 3000, 50, 'underground');
+            api.addPlatform(0, 0, 3000, 100, 'underground');
+
+            // 迷宫平台
+            for (let i = 0; i < 10; i++) {
+                const y = i % 2 === 0 ? 450 : 200;
+                api.addPlatform(300 + i * 200, y, 120, 30, 'underground');
+                api.addCoin(360 + i * 200, y - 50);
+            }
+
+            // 敌人
+            api.addEnemy(500, 500, 'goomba');
+            api.addEnemy(900, 500, 'koopa');
+            api.addEnemy(1300, 500, 'goomba');
+
+            // 道具
+            api.addPowerUp(1000, 400, 'flower');
+            api.addPowerUp(1500, 150, 'mushroom');
+
+            api.setPlayerStart(100, 450);
+            api.buildLevel();
+            api.startGame();
+
+            window.setStatus('Level 2 Loaded');
+        }
+
+        // Level 3 - Sky
+        window.loadLevel3 = function() {
+            if (!window.MarioGameAPI) {
+                alert('Game not loaded yet!');
+                return;
+            }
+
+            const api = window.MarioGameAPI;
+            window.setStatus('Loading Level 3...');
+
+            api.clearLevel();
+
+            // 最小地面
+            api.addPlatform(0, 550, 200, 50, 'ground');
+            api.addPlatform(2800, 550, 200, 50, 'ground');
+
+            // 云朵平台
+            for (let i = 0; i < 20; i++) {
+                const x = 200 + i * 130;
+                const y = 400 - Math.sin(i * 0.5) * 100;
+                api.addPlatform(x, y, 80, 20, 'platform');
+
+                if (i % 3 === 0) {
+                    api.addCoin(x + 40, y - 50);
+                }
+            }
+
+            // 空中敌人
+            api.addEnemy(500, 300, 'firebar');
+            api.addEnemy(1000, 250, 'firebar');
+            api.addEnemy(1500, 300, 'firebar');
+
+            // 道具
+            api.addPowerUp(800, 200, 'star');
+            api.addPowerUp(1600, 200, 'flower');
+
+            api.setPlayerStart(50, 450);
+            api.buildLevel();
+            api.startGame();
+
+            window.setStatus('Level 3 Loaded');
+        }
+
+        // Test Level
+        window.loadTestLevel = function() {
+            if (!window.MarioGameAPI) {
+                alert('Game not loaded yet!');
+                return;
+            }
+
+            const api = window.MarioGameAPI;
+            window.setStatus('Loading Test Level...');
+
+            api.clearLevel();
+
+            // 简单测试关卡
+            api.addPlatform(0, 500, 2000, 76, 'ground');
+            api.addPlatform(300, 400, 100, 20, 'platform');
+            api.addPlatform(500, 350, 100, 20, 'platform');
+            api.addPlatform(700, 300, 100, 20, 'platform');
+
+            // 测试所有元素
+            api.addCoin(350, 350);
+            api.addCoin(550, 300);
+            api.addCoin(750, 250);
+
+            api.addEnemy(400, 450, 'goomba');
+            api.addEnemy(600, 450, 'koopa');
+
+            api.addPowerUp(800, 250, 'mushroom');
+            api.addPowerUp(900, 250, 'flower');
+            api.addPowerUp(1000, 250, 'star');
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            window.setStatus('Test Level Loaded');
+        }
+
+        // Random Level
+        window.loadRandomLevel = function() {
+            if (!window.MarioGameAPI) {
+                alert('Game not loaded yet!');
+                return;
+            }
+
+            const api = window.MarioGameAPI;
+            window.setStatus('Generating Random Level...');
+
+            api.clearLevel();
+
+            // 地面
+            api.addPlatform(0, 500, 3000, 76, 'ground');
+
+            // 随机平台
+            for (let i = 0; i < 15; i++) {
+                const x = 200 + Math.random() * 2500;
+                const y = 200 + Math.random() * 200;
+                const width = 60 + Math.random() * 60;
+                api.addPlatform(x, y, width, 20, 'platform');
+
+                // 随机金币
+                if (Math.random() > 0.5) {
+                    api.addCoin(x + width/2, y - 50);
+                }
+            }
+
+            // 随机敌人
+            for (let i = 0; i < 8; i++) {
+                const x = 300 + Math.random() * 2400;
+                const types = ['goomba', 'koopa'];
+                api.addEnemy(x, 450, types[Math.floor(Math.random() * types.length)]);
+            }
+
+            // 随机道具
+            for (let i = 0; i < 3; i++) {
+                const x = 400 + Math.random() * 2000;
+                const y = 200 + Math.random() * 150;
+                const types = ['mushroom', 'flower', 'star'];
+                api.addPowerUp(x, y, types[Math.floor(Math.random() * types.length)]);
+            }
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            window.setStatus('Random Level Generated');
+        }
+
+        window.clearLevel = function() {
+            if (window.MarioGameAPI) {
+                window.MarioGameAPI.clearLevel();
+                window.setStatus('Level Cleared');
+            }
+        }
+
+        window.resetGame = function() {
+            if (window.MarioGameAPI) {
+                window.MarioGameAPI.resetGame();
+                window.setStatus('Game Reset');
+            }
+        }
+
+        // 自动加载第一关
+        setTimeout(() => {
+            window.loadLevel1();
+        }, 1500);
+    </script>
+</body>
+</html>

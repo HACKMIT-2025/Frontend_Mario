@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Engine API</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        #status {
+            padding: 20px;
+            background: #000;
+            border: 1px solid #0f0;
+            margin: 20px 0;
+            white-space: pre-wrap;
+        }
+        canvas {
+            border: 1px solid #0f0;
+            display: block;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Engine API Test</h1>
+    <div id="status">Initializing...</div>
+    <canvas id="test-canvas"></canvas>
+
+    <script type="module">
+        const status = document.getElementById('status');
+
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            status.textContent += `\n[${time}] ${message}`;
+            console.log(message);
+        }
+
+        log('Starting test...');
+
+        try {
+            log('Importing GameAPI...');
+            const { GameAPI } = await import('./src/engine/index.ts');
+            log('GameAPI imported successfully!');
+
+            log('Creating GameAPI instance...');
+            const gameAPI = new GameAPI('test-canvas', {
+                width: 800,
+                height: 400,
+                gravity: 0.5,
+                fps: 60
+            });
+            log('GameAPI created successfully!');
+
+            log('Making API global...');
+            window.GameAPI = gameAPI;
+
+            log('Testing API methods...');
+
+            // Test clearing level
+            gameAPI.clearLevel();
+            log('✓ clearLevel() works');
+
+            // Test adding platform
+            gameAPI.addPlatform(0, 350, 800, 50, 'ground');
+            log('✓ addPlatform() works');
+
+            // Test adding enemy
+            gameAPI.addEnemy(400, 300, 'goomba');
+            log('✓ addEnemy() works');
+
+            // Test adding coin
+            gameAPI.addCoin(200, 250);
+            log('✓ addCoin() works');
+
+            // Test setting player start
+            gameAPI.setPlayerStart(100, 300);
+            log('✓ setPlayerStart() works');
+
+            // Test building level
+            gameAPI.buildLevel();
+            log('✓ buildLevel() works');
+
+            // Test starting game
+            gameAPI.startGame();
+            log('✓ startGame() works');
+
+            log('\n✅ ALL TESTS PASSED! Engine API is working correctly.');
+
+        } catch (error) {
+            log(`\n❌ ERROR: ${error.message}`);
+            console.error('Full error:', error);
+        }
+    </script>
+</body>
+</html>

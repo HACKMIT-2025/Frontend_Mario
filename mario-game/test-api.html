@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Game API Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: #2c3e50;
+            color: white;
+        }
+        .controls {
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .section {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #3498db;
+        }
+        .info {
+            background: rgba(52, 152, 219, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        #game-frame {
+            width: 100%;
+            height: 600px;
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Mario Game Engine API Test</h1>
+
+    <div class="controls">
+        <div class="info">
+            <strong>游戏控制：</strong> 方向键/WASD移动 | 空格跳跃 | Shift奔跑 | X发射火球
+        </div>
+
+        <div class="section">
+            <h2>📍 预设关卡</h2>
+            <button onclick="loadClassicLevel()">经典关卡</button>
+            <button onclick="loadUndergroundLevel()">地下关卡</button>
+            <button onclick="loadCastleLevel()">城堡关卡</button>
+            <button onclick="loadCustomLevel()">自定义测试关卡</button>
+        </div>
+
+        <div class="section">
+            <h2>🎯 游戏控制</h2>
+            <button onclick="startGame()">开始游戏</button>
+            <button onclick="pauseGame()">暂停/继续</button>
+            <button onclick="resetGame()">重置游戏</button>
+            <button onclick="clearLevel()">清空关卡</button>
+        </div>
+
+        <div class="section">
+            <h2>🔧 动态添加元素</h2>
+            <button onclick="addRandomPlatform()">添加随机平台</button>
+            <button onclick="addRandomEnemy()">添加随机敌人</button>
+            <button onclick="addRandomCoins()">添加随机金币</button>
+            <button onclick="addRandomPowerUp()">添加随机道具</button>
+        </div>
+
+        <div class="section">
+            <h2>🏗️ 关卡构建器</h2>
+            <button onclick="buildSimpleLevel()">构建简单关卡</button>
+            <button onclick="buildComplexLevel()">构建复杂关卡</button>
+            <button onclick="buildFromImageData()">模拟图像识别构建</button>
+        </div>
+    </div>
+
+    <iframe id="game-frame" src="http://localhost:5174"></iframe>
+
+    <script>
+        // 等待游戏加载完成
+        let gameWindow;
+        let api;
+
+        setTimeout(() => {
+            gameWindow = document.getElementById('game-frame').contentWindow;
+            api = gameWindow.MarioGameAPI;
+            console.log('API Loaded:', api);
+        }, 1000);
+
+        function startGame() {
+            if (api) {
+                api.startGame();
+                console.log('Game started');
+            }
+        }
+
+        function pauseGame() {
+            if (api) {
+                api.pauseGame();
+                console.log('Game paused/resumed');
+            }
+        }
+
+        function resetGame() {
+            if (api) {
+                api.resetGame();
+                console.log('Game reset');
+            }
+        }
+
+        function clearLevel() {
+            if (api) {
+                api.clearLevel();
+                console.log('Level cleared');
+            }
+        }
+
+        function loadClassicLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 地面
+            api.addPlatform(0, 500, 3000, 76, 'ground');
+
+            // 第一区域 - 基础平台和金币
+            for (let i = 0; i < 5; i++) {
+                api.addCoin(200 + i * 40, 350);
+            }
+            api.addPlatform(300, 400, 100, 20, 'platform');
+
+            // 管道区域
+            api.addPlatform(500, 400, 64, 100, 'pipe');
+            api.addEnemy(450, 450, 'goomba');
+
+            // 阶梯
+            for (let i = 0; i < 4; i++) {
+                const width = 32 * (4 - i);
+                const x = 700 + i * 32;
+                const y = 500 - i * 32;
+                api.addPlatform(x, y, width, 32, 'brick');
+            }
+
+            // 间隙区域与浮动平台
+            api.addPlatform(900, 350, 80, 20, 'platform');
+            api.addPlatform(1020, 350, 80, 20, 'platform');
+            api.addPlatform(1140, 350, 80, 20, 'platform');
+
+            // 金币行
+            for (let i = 0; i < 3; i++) {
+                api.addCoin(920 + i * 40, 300);
+            }
+            for (let i = 0; i < 3; i++) {
+                api.addCoin(1040 + i * 40, 300);
+            }
+
+            // 问号砖块与道具
+            api.addPlatform(1400, 350, 32, 32, 'question');
+            api.addPowerUp(1400, 318, 'mushroom');
+
+            // 敌人区域
+            api.addEnemy(1500, 450, 'koopa');
+            api.addEnemy(1600, 450, 'goomba');
+            api.addEnemy(1700, 450, 'goomba');
+
+            // 最终区域
+            for (let i = 0; i < 8; i++) {
+                const width = 32 * (8 - i);
+                const x = 2000 + i * 32;
+                const y = 500 - i * 32;
+                api.addPlatform(x, y, width, 32, 'brick');
+            }
+
+            api.addPlatform(2300, 200, 100, 20, 'platform');
+            api.addPowerUp(2350, 150, 'star');
+
+            // 终点管道
+            api.addPlatform(2500, 350, 64, 150, 'pipe');
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Classic level loaded');
+        }
+
+        function loadUndergroundLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 地下地板和天花板
+            api.addPlatform(0, 550, 3000, 26, 'underground');
+            api.addPlatform(0, 0, 3000, 50, 'underground');
+
+            // 入口管道
+            api.addPlatform(100, 450, 64, 100, 'pipe');
+
+            // 地下障碍
+            for (let i = 0; i < 10; i++) {
+                const x = 300 + i * 200;
+                if (i % 2 === 0) {
+                    api.addPlatform(x, 450, 80, 100, 'underground');
+                } else {
+                    api.addPlatform(x, 200, 80, 100, 'underground');
+                }
+                api.addCoin(x + 40, i % 2 === 0 ? 400 : 350);
+            }
+
+            // 敌人
+            api.addEnemy(500, 500, 'goomba');
+            api.addEnemy(900, 500, 'koopa');
+            api.addEnemy(1300, 500, 'goomba');
+
+            // 道具
+            api.addPowerUp(1500, 400, 'flower');
+
+            // 出口管道
+            api.addPlatform(2500, 450, 64, 100, 'pipe');
+
+            api.setPlayerStart(200, 450);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Underground level loaded');
+        }
+
+        function loadCastleLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 城堡地板
+            api.addPlatform(0, 550, 3000, 26, 'castle');
+
+            // 岩浆坑与平台
+            for (let i = 0; i < 5; i++) {
+                const x = 300 + i * 400;
+                api.addPlatform(x, 500, 50, 50, 'castle');
+                api.addPlatform(x + 150, 450, 50, 100, 'castle');
+                api.addPlatform(x + 300, 400, 50, 150, 'castle');
+            }
+
+            // 移动平台
+            api.addPlatform(600, 350, 80, 20, 'platform');
+            api.addPlatform(1000, 300, 80, 20, 'platform');
+            api.addPlatform(1400, 350, 80, 20, 'platform');
+
+            // 火棒障碍
+            api.addEnemy(800, 300, 'firebar');
+            api.addEnemy(1200, 350, 'firebar');
+            api.addEnemy(1600, 300, 'firebar');
+
+            // 鲍泽
+            api.addEnemy(2400, 450, 'bowser');
+
+            // 通往斧头的桥
+            api.addPlatform(2200, 450, 300, 20, 'bridge');
+
+            api.setPlayerStart(100, 450);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Castle level loaded');
+        }
+
+        function loadCustomLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 测试所有API功能
+            // 基础地面
+            api.addPlatform(0, 500, 2000, 76, 'ground');
+
+            // 各种类型的平台
+            api.addPlatform(200, 400, 100, 20, 'platform');
+            api.addPlatform(350, 350, 32, 32, 'brick');
+            api.addPlatform(450, 350, 32, 32, 'question');
+            api.addPlatform(550, 400, 64, 100, 'pipe');
+
+            // 所有类型的敌人
+            api.addEnemy(700, 450, 'goomba');
+            api.addEnemy(800, 450, 'koopa');
+            api.addEnemy(900, 300, 'firebar');
+
+            // 所有类型的道具
+            api.addPowerUp(1000, 400, 'mushroom');
+            api.addPowerUp(1100, 400, 'flower');
+            api.addPowerUp(1200, 400, 'star');
+
+            // 大量金币测试
+            for (let i = 0; i < 10; i++) {
+                api.addCoin(1300 + i * 30, 350);
+            }
+
+            // 复杂平台结构
+            for (let i = 0; i < 5; i++) {
+                api.addPlatform(1600 + i * 100, 400 - i * 30, 80, 20, 'platform');
+            }
+
+            api.setPlayerStart(50, 400);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Custom test level loaded');
+        }
+
+        function addRandomPlatform() {
+            if (!api) return;
+            const x = Math.random() * 1500 + 200;
+            const y = Math.random() * 200 + 300;
+            const types = ['platform', 'brick', 'question'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            api.addPlatform(x, y, 80, 20, type);
+            api.buildLevel();
+            console.log(`Added platform at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        }
+
+        function addRandomEnemy() {
+            if (!api) return;
+            const x = Math.random() * 1500 + 200;
+            const types = ['goomba', 'koopa'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            api.addEnemy(x, 450, type);
+            api.buildLevel();
+            console.log(`Added ${type} at x=${x.toFixed(0)}`);
+        }
+
+        function addRandomCoins() {
+            if (!api) return;
+            const startX = Math.random() * 1000 + 200;
+            const y = Math.random() * 150 + 300;
+            const count = Math.floor(Math.random() * 5) + 3;
+            for (let i = 0; i < count; i++) {
+                api.addCoin(startX + i * 40, y);
+            }
+            api.buildLevel();
+            console.log(`Added ${count} coins at (${startX.toFixed(0)}, ${y.toFixed(0)})`);
+        }
+
+        function addRandomPowerUp() {
+            if (!api) return;
+            const x = Math.random() * 1500 + 200;
+            const y = Math.random() * 150 + 300;
+            const types = ['mushroom', 'flower', 'star'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            api.addPowerUp(x, y, type);
+            api.buildLevel();
+            console.log(`Added ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        }
+
+        function buildSimpleLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 简单的平地关卡
+            api.addPlatform(0, 500, 2000, 76, 'ground');
+
+            // 几个平台
+            api.addPlatform(300, 400, 100, 20, 'platform');
+            api.addPlatform(500, 350, 100, 20, 'platform');
+            api.addPlatform(700, 300, 100, 20, 'platform');
+
+            // 一些金币
+            for (let i = 0; i < 20; i++) {
+                api.addCoin(200 + i * 50, 250);
+            }
+
+            // 几个敌人
+            api.addEnemy(400, 450, 'goomba');
+            api.addEnemy(600, 450, 'goomba');
+
+            // 一个道具
+            api.addPowerUp(800, 250, 'mushroom');
+
+            api.setPlayerStart(100, 400);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Simple level built');
+        }
+
+        function buildComplexLevel() {
+            if (!api) return;
+
+            api.clearLevel();
+
+            // 复杂的多层关卡
+            api.addPlatform(0, 550, 3000, 26, 'ground');
+
+            // 创建多层平台结构
+            for (let layer = 0; layer < 3; layer++) {
+                for (let i = 0; i < 10; i++) {
+                    const x = 200 + i * 150;
+                    const y = 450 - layer * 100;
+                    api.addPlatform(x, y, 80, 20, 'platform');
+
+                    // 在平台上添加金币
+                    if (Math.random() > 0.5) {
+                        api.addCoin(x + 40, y - 50);
+                    }
+                }
+            }
+
+            // 添加各种敌人
+            for (let i = 0; i < 8; i++) {
+                const x = 300 + i * 200;
+                const types = ['goomba', 'koopa'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                api.addEnemy(x, 500, type);
+            }
+
+            // 添加道具
+            api.addPowerUp(500, 200, 'mushroom');
+            api.addPowerUp(1000, 200, 'flower');
+            api.addPowerUp(1500, 200, 'star');
+
+            // 添加管道
+            api.addPlatform(1800, 450, 64, 100, 'pipe');
+            api.addPlatform(2000, 400, 64, 150, 'pipe');
+            api.addPlatform(2200, 350, 64, 200, 'pipe');
+
+            api.setPlayerStart(100, 450);
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Complex level built');
+        }
+
+        function buildFromImageData() {
+            if (!api) return;
+
+            // 模拟从图像识别获得的数据
+            const imageData = [
+                { type: 'ground', x: 0, y: 500, width: 2000, height: 76 },
+                { type: 'platform', x: 300, y: 400, width: 100, height: 20 },
+                { type: 'platform', x: 500, y: 350, width: 100, height: 20 },
+                { type: 'brick', x: 700, y: 350, width: 32, height: 32 },
+                { type: 'brick', x: 732, y: 350, width: 32, height: 32 },
+                { type: 'brick', x: 764, y: 350, width: 32, height: 32 },
+                { type: 'question', x: 796, y: 350, width: 32, height: 32 },
+                { type: 'pipe', x: 1000, y: 400, width: 64, height: 100 },
+                { type: 'coin', x: 350, y: 300 },
+                { type: 'coin', x: 550, y: 250 },
+                { type: 'coin', x: 750, y: 250 },
+                { type: 'enemy', x: 400, y: 450, enemyType: 'goomba' },
+                { type: 'enemy', x: 600, y: 450, enemyType: 'koopa' },
+                { type: 'powerup', x: 796, y: 318, powerType: 'mushroom' },
+                { type: 'player', x: 100, y: 400 }
+            ];
+
+            api.clearLevel();
+
+            // 解析图像识别数据
+            imageData.forEach(obj => {
+                switch(obj.type) {
+                    case 'platform':
+                    case 'ground':
+                    case 'brick':
+                    case 'question':
+                    case 'pipe':
+                        api.addPlatform(obj.x, obj.y, obj.width, obj.height, obj.type);
+                        break;
+                    case 'coin':
+                        api.addCoin(obj.x, obj.y);
+                        break;
+                    case 'enemy':
+                        api.addEnemy(obj.x, obj.y, obj.enemyType);
+                        break;
+                    case 'powerup':
+                        api.addPowerUp(obj.x, obj.y, obj.powerType);
+                        break;
+                    case 'player':
+                        api.setPlayerStart(obj.x, obj.y);
+                        break;
+                }
+            });
+
+            api.buildLevel();
+            api.startGame();
+
+            console.log('Level built from simulated image data');
+        }
+
+        // 页面加载完成后自动加载经典关卡
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                loadClassicLevel();
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Simple Mario</title>
+</head>
+<body>
+    <h1>Testing Simple Mario API</h1>
+    <p>Open console to see if API works</p>
+    <iframe src="http://localhost:5174/mario-api-engine.html" width="1200" height="800"></iframe>
+
+    <script>
+        setTimeout(() => {
+            console.log('Testing if game loads correctly...');
+            // Check if the iframe loaded
+            const iframe = document.querySelector('iframe');
+            if (iframe) {
+                console.log('Iframe loaded, game should be visible');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
