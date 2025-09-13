@@ -165,6 +165,8 @@ export class GameEngine {
     // Update entities
     entities.forEach(entity => {
       entity.update(dt)
+      // Apply world boundaries
+      this.enforceWorldBoundaries(entity)
     })
 
     // Update camera to follow player (disabled for now to avoid drift)
@@ -197,6 +199,48 @@ export class GameEngine {
           this.handlePlayerCollision(entity)
         }
       })
+
+      // Check for victory condition (player reaching goal pipe)
+      platforms.forEach(platform => {
+        if (platform.isGoal) {
+          const overlap = this.checkPlayerPlatformOverlap(this.player!, platform)
+          if (overlap) {
+            console.log('🎉 Victory condition triggered!')
+            this.victory()
+          }
+        }
+      })
+    }
+  }
+
+  private checkPlayerPlatformOverlap(player: Player, platform: Platform): boolean {
+    return player.position.x < platform.x + platform.width &&
+           player.position.x + player.width > platform.x &&
+           player.position.y < platform.y + platform.height &&
+           player.position.y + player.height > platform.y
+  }
+
+  private enforceWorldBoundaries(entity: Entity) {
+    const worldWidth = 3000  // Match the ground width
+    const worldHeight = 600  // Allow some space above and below
+
+    // Horizontal boundaries
+    if (entity.position.x < 0) {
+      entity.position.x = 0
+      entity.velocity.x = Math.max(0, entity.velocity.x) // Stop leftward movement
+    } else if (entity.position.x + entity.width > worldWidth) {
+      entity.position.x = worldWidth - entity.width
+      entity.velocity.x = Math.min(0, entity.velocity.x) // Stop rightward movement
+    }
+
+    // Vertical boundaries (mainly for falling off the world)
+    if (entity.position.y > worldHeight + 100) {
+      // Entity fell off the world
+      if (entity.type === 'player') {
+        this.playerHit() // Player loses a life
+      } else {
+        entity.dead = true // Other entities just die
+      }
     }
   }
 
@@ -267,6 +311,30 @@ export class GameEngine {
     this.running = false
     console.log('Game Over! Score:', this.score)
     // TODO: Show game over screen
+  }
+
+  private victory() {
+    this.running = false
+    this.score += 1000 // Bonus points for completing level
+    console.log('🎉 Victory! Score:', this.score)
+
+    // Display victory message on canvas
+    this.ctx.save()
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+
+    this.ctx.fillStyle = '#FFD700'
+    this.ctx.font = 'bold 48px Arial'
+    this.ctx.textAlign = 'center'
+    this.ctx.fillText('🎉 VICTORY! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 50)
+
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.font = '32px Arial'
+    this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20)
+
+    this.ctx.font = '20px Arial'
+    this.ctx.fillText('Press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 60)
+    this.ctx.restore()
   }
 
   private render() {

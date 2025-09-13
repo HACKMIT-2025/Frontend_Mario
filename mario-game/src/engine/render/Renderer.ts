@@ -137,6 +137,27 @@ export class Renderer {
         this.ctx.stroke()
         break
 
+      case 'goal_pipe':
+        // Draw goal pipe (victory pipe) in golden color
+        this.ctx.fillStyle = '#FFD700'
+        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+        // Pipe top
+        this.ctx.fillStyle = '#FFA500'
+        this.ctx.fillRect(platform.x - 8, platform.y, platform.width + 16, 32)
+        // Pipe highlights
+        this.ctx.strokeStyle = '#FFFF00'
+        this.ctx.lineWidth = 2
+        this.ctx.beginPath()
+        this.ctx.moveTo(platform.x + 5, platform.y + 32)
+        this.ctx.lineTo(platform.x + 5, platform.y + platform.height)
+        this.ctx.stroke()
+        // Add sparkle effect
+        this.ctx.fillStyle = '#FFFFFF'
+        this.ctx.font = 'bold 16px Arial'
+        this.ctx.textAlign = 'center'
+        this.ctx.fillText('★', platform.x + platform.width / 2, platform.y + 50)
+        break
+
       case 'platform':
         // Floating platform
         this.ctx.fillStyle = '#8B7355'
@@ -184,6 +205,16 @@ export class Renderer {
 
   public renderEntity(entity: Entity) {
     entity.render(this.ctx)
+
+    // Debug: Draw entity bounding boxes
+    if (entity.type === 'coin' || entity.type === 'player') {
+      this.ctx.save()
+      this.ctx.strokeStyle = entity.type === 'coin' ? '#FF0000' : '#00FF00'
+      this.ctx.lineWidth = 1
+      this.ctx.setLineDash([2, 2])
+      this.ctx.strokeRect(entity.position.x, entity.position.y, entity.width, entity.height)
+      this.ctx.restore()
+    }
   }
 
   public renderUI(data: UIData) {

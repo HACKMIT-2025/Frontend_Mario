@@ -6,6 +6,7 @@ export class Platform {
   public type: string
   public solid = true
   public breakable = false
+  public isGoal = false
 
   constructor(x: number, y: number, width: number, height: number, type = 'normal') {
     this.x = x
@@ -24,6 +25,9 @@ export class Platform {
         break
       case 'question':
         this.breakable = false
+        break
+      case 'goal_pipe':
+        this.isGoal = true
         break
     }
   }

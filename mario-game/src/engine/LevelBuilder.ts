@@ -81,8 +81,8 @@ export class LevelBuilder {
     return this
   }
 
-  public addPipe(x: number, y: number, height = 100): this {
-    this.addPlatform(x, y, 64, height, 'pipe')
+  public addPipe(x: number, y: number, height = 100, isGoal = false): this {
+    this.addPlatform(x, y, 64, height, isGoal ? 'goal_pipe' : 'pipe')
     return this
   }
 

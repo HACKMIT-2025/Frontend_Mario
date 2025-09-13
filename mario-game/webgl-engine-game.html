@@ -315,6 +315,10 @@
 
             gameAPI.clearLevel();
 
+            // World boundaries - invisible walls
+            gameAPI.addPlatform(-100, 0, 100, 700, 'underground'); // Left wall
+            gameAPI.addPlatform(3000, 0, 100, 700, 'underground'); // Right wall
+
             // Ground
             gameAPI.addPlatform(0, 500, 3000, 76, 'ground');
 
@@ -356,7 +360,7 @@
 
             // Final area
             gameAPI.addPlatformStairs(2400, 500, 8);
-            gameAPI.addPipe(2700, 200, 300);
+            gameAPI.addGoalPipe(2700, 400, 100);  // Victory pipe at ground level!
 
             gameAPI.setPlayerStart(100, 400);
             gameAPI.buildLevel();

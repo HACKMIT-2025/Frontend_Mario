@@ -95,10 +95,17 @@ export class GameAPI {
   /**
    * Add a pipe
    */
-  addPipe(x: number, y: number, height = 100): this {
-    this.builder.addPipe(x, y, height)
-    this.log(`Pipe added at (${x}, ${y}) height: ${height}`)
+  addPipe(x: number, y: number, height = 100, isGoal = false): this {
+    this.builder.addPipe(x, y, height, isGoal)
+    this.log(`Pipe added at (${x}, ${y}) height: ${height}${isGoal ? ' (GOAL)' : ''}`)
     return this
+  }
+
+  /**
+   * Add a goal pipe (victory condition)
+   */
+  addGoalPipe(x: number, y: number, height = 100): this {
+    return this.addPipe(x, y, height, true)
   }
 
   /**

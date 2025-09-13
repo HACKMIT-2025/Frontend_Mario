@@ -13,7 +13,8 @@ export class PowerUp extends Entity {
     this.powerType = type
     this.targetY = y
     this.position.y = y + 32 // Start below block
-    this.setPhysics({ solid: false, gravity: type !== 'flower' })
+    // Mushrooms and stars need solid collision to stand on platforms
+    this.setPhysics({ solid: type === 'mushroom' || type === 'star', gravity: type !== 'flower' })
   }
 
   public update(dt: number) {
