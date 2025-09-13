@@ -205,36 +205,17 @@ export class Renderer {
 
   public renderEntity(entity: Entity) {
     entity.render(this.ctx)
-
-    // Debug: Draw entity bounding boxes
-    if (entity.type === 'coin' || entity.type === 'player') {
-      this.ctx.save()
-      this.ctx.strokeStyle = entity.type === 'coin' ? '#FF0000' : '#00FF00'
-      this.ctx.lineWidth = 1
-      this.ctx.setLineDash([2, 2])
-      this.ctx.strokeRect(entity.position.x, entity.position.y, entity.width, entity.height)
-      this.ctx.restore()
-    }
   }
 
   public renderUI(data: UIData) {
-    this.ctx.save()
-    this.ctx.fillStyle = '#FFFFFF'
-    this.ctx.font = 'bold 20px monospace'
-    this.ctx.textAlign = 'left'
-    this.ctx.textBaseline = 'top'
+    // Update DOM elements instead of drawing on canvas
+    const scoreElement = document.getElementById('score')
+    const livesElement = document.getElementById('lives')
+    const coinsElement = document.getElementById('coins')
 
-    // Draw UI background
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
-    this.ctx.fillRect(10, 10, 300, 80)
-
-    // Draw text
-    this.ctx.fillStyle = '#FFFFFF'
-    this.ctx.fillText(`SCORE: ${data.score.toString().padStart(6, '0')}`, 20, 20)
-    this.ctx.fillText(`COINS: ${data.coins.toString().padStart(2, '0')}`, 20, 45)
-    this.ctx.fillText(`LIVES: ${data.lives}`, 20, 70)
-
-    this.ctx.restore()
+    if (scoreElement) scoreElement.textContent = data.score.toString()
+    if (livesElement) livesElement.textContent = data.lives.toString()
+    if (coinsElement) coinsElement.textContent = data.coins.toString()
   }
 
   public renderParticle(x: number, y: number, type: string) {

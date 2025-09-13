@@ -12,26 +12,26 @@ export class Camera {
     this.height = height
   }
 
-  public follow(_entity: Entity, _offsetX = -this.width/2, _offsetY = -this.height/2 + 100) {
-    // Camera follow disabled to prevent drift
-    // Implementation kept but not actively following
-    // Uncomment below to re-enable camera following:
-    /*
-    const targetX = entity.position.x + offsetX
-    const targetY = entity.position.y + offsetY
-    this.x += (targetX - this.x) * this.smoothing
-    this.y += (targetY - this.y) * this.smoothing
-    */
+  public follow(entity: Entity, _offsetX = -this.width/2, _offsetY = -this.height/2 + 100) {
+    // Simple camera follow - keep player centered horizontally
+    const targetX = entity.position.x - this.width / 2 + entity.width / 2
+    const targetY = 0 // Lock Y axis to prevent vertical movement
 
-    // Apply bounds if set
+    // Direct positioning to avoid drift issues
+    this.x = targetX
+    this.y = targetY
+
+    // Apply world boundaries
+    const worldWidth = 3000 // Match the level width
+    this.x = Math.max(0, this.x) // Left boundary
+    this.x = Math.min(worldWidth - this.width, this.x) // Right boundary
+    this.y = 0 // Keep Y locked
+
+    // Apply additional bounds if set
     if (this.bounds) {
       this.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX - this.width, this.x))
       this.y = Math.max(this.bounds.minY, Math.min(this.bounds.maxY - this.height, this.y))
     }
-
-    // Prevent camera from going negative
-    this.x = Math.max(0, this.x)
-    this.y = Math.min(this.y, 0)
   }
 
   public setBounds(minX: number, maxX: number, minY: number, maxY: number) {

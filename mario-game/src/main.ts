@@ -1,5 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
+import { loadCustomLevel } from './customLevel'
 
 // Initialize game container
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -67,5 +68,6 @@ GameAPI.importJSON(json)
 GameAPI.generateFromImageData(imageData)
 `)
 
-// Start with a classic level
-gameAPI.loadClassicLevel().startGame()
+// Load custom level based on level_data.json
+loadCustomLevel(gameAPI.engine)
+gameAPI.startGame()

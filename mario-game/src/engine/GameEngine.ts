@@ -169,10 +169,10 @@ export class GameEngine {
       this.enforceWorldBoundaries(entity)
     })
 
-    // Update camera to follow player (disabled for now to avoid drift)
-    // if (this.player) {
-    //   this.camera.follow(this.player)
-    // }
+    // Update camera to follow player
+    if (this.player) {
+      this.camera.follow(this.player)
+    }
 
     // Remove dead entities
     this.entityManager.removeDeadEntities()

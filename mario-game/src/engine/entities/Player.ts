@@ -72,15 +72,14 @@ export class Player extends Entity {
     }
 
     const height = this.size === 'big' ? 64 : 32
-    const y = this.size === 'big' ? this.position.y - 32 : this.position.y
 
-    ctx.fillRect(this.position.x, y, this.width, height)
+    ctx.fillRect(this.position.x, this.position.y, this.width, height)
 
     // Draw eyes to show direction
     ctx.fillStyle = '#FFFFFF'
     const eyeOffset = this.facing === 'right' ? 20 : 5
-    ctx.fillRect(this.position.x + eyeOffset, y + 8, 4, 4)
-    ctx.fillRect(this.position.x + eyeOffset, y + 16, 4, 4)
+    ctx.fillRect(this.position.x + eyeOffset, this.position.y + 8, 4, 4)
+    ctx.fillRect(this.position.x + eyeOffset, this.position.y + 16, 4, 4)
 
     ctx.restore()
   }
@@ -118,6 +117,8 @@ export class Player extends Entity {
     if (this.size === 'small') {
       this.size = 'big'
       this.height = 64
+      // Adjust position so Mario's feet stay at the same level
+      this.position.y -= 32
     }
   }
 
@@ -125,6 +126,8 @@ export class Player extends Entity {
     if (this.size === 'big') {
       this.size = 'small'
       this.height = 32
+      // Adjust position so Mario's feet stay at the same level
+      this.position.y += 32
       this.makeInvulnerable(1500)
     }
   }

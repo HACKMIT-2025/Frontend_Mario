@@ -28,8 +28,12 @@ export class Coin extends Entity {
   public render(ctx: CanvasRenderingContext2D) {
     ctx.save()
 
+    // Calculate center coordinates
+    const centerX = this.position.x + this.width / 2
+    const centerY = this.position.y + this.height / 2
+
     // Center for rotation
-    ctx.translate(this.position.x + this.width / 2, this.position.y + this.height / 2)
+    ctx.translate(centerX, centerY)
 
     // Apply rotation for spinning effect
     ctx.scale(Math.cos(this.rotation), 1)
@@ -37,7 +41,7 @@ export class Coin extends Entity {
     // Draw coin
     ctx.fillStyle = '#FFD700'
     ctx.beginPath()
-    ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2)
+    ctx.arc(0, 0, this.width / 2 - 2, 0, Math.PI * 2) // Slightly smaller to fit within bounds
     ctx.fill()
 
     // Draw inner circle
@@ -48,7 +52,7 @@ export class Coin extends Entity {
 
     // Draw dollar sign
     ctx.fillStyle = '#FFD700'
-    ctx.font = 'bold 12px Arial'
+    ctx.font = 'bold 10px Arial'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText('$', 0, 0)
