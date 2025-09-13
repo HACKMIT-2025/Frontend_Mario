@@ -280,6 +280,7 @@ export class Renderer {
         this.ctx.fillText('★', platform.x + platform.width / 2, platform.y + 50)
         break
 
+      case 'ground':
       case 'platform':
         let grassDrawn = true
         let terrainDrawn = true
@@ -331,7 +332,7 @@ export class Renderer {
           }
         }
 
-        this.debugMode.logPlatformRender('platform', grassDrawn && terrainDrawn)
+        this.debugMode.logPlatformRender(platform.type, grassDrawn && terrainDrawn)
         break
 
       case 'underground':

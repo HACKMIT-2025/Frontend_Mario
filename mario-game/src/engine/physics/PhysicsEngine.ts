@@ -155,11 +155,23 @@ export class PhysicsEngine {
   }
 
   private getAABB(obj: any): AABB {
+    // Validate object has required properties
+    if (!obj) {
+      console.warn('getAABB called with null/undefined object')
+      return { x: 0, y: 0, width: 0, height: 0 }
+    }
+    
+    const x = obj.position?.x ?? obj.x ?? 0
+    const y = obj.position?.y ?? obj.y ?? 0
+    const width = obj.width ?? 0
+    const height = obj.height ?? 0
+    
+    // Ensure finite values
     return {
-      x: obj.position?.x || obj.x,
-      y: obj.position?.y || obj.y,
-      width: obj.width,
-      height: obj.height
+      x: isFinite(x) ? x : 0,
+      y: isFinite(y) ? y : 0,
+      width: isFinite(width) && width > 0 ? width : 0,
+      height: isFinite(height) && height > 0 ? height : 0
     }
   }
 
@@ -213,6 +225,8 @@ export class PhysicsEngine {
     const { x1: x3, y1: y3, x2: x4, y2: y4 } = seg2
 
     const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    
+    // Check for parallel lines (avoid division by zero)
     if (Math.abs(denom) < 0.0001) return false
 
     const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
@@ -272,11 +286,12 @@ export class PhysicsEngine {
     const { x1, y1, x2, y2 } = segment
     const dx = x2 - x1
     const dy = y2 - y1
-    const length = Math.sqrt(dx * dx + dy * dy)
+    const lengthSquared = dx * dx + dy * dy
 
-    if (length === 0) return { x: x1, y: y1 }
+    // Handle degenerate case (zero-length segment)
+    if (lengthSquared < 0.0001) return { x: x1, y: y1 }
 
-    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (length * length)))
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSquared))
     return {
       x: x1 + t * dx,
       y: y1 + t * dy

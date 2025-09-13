@@ -2,8 +2,12 @@ import './style.css'
 import { GameAPI } from './engine'
 import { loadCustomLevel } from './customLevel'
 
-// Initialize game container
-const app = document.querySelector<HTMLDivElement>('#app')!
+// Initialize game container with error handling
+const app = document.querySelector<HTMLDivElement>('#app')
+if (!app) {
+  throw new Error('App container not found! Make sure you have a div with id="app" in your HTML.')
+}
+
 app.innerHTML = `
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
@@ -15,13 +19,19 @@ app.innerHTML = `
   </div>
 `
 
-// Initialize game API
-const gameAPI: GameAPI = new GameAPI('game-canvas', {
-  width: 1024,
-  height: 576,
-  gravity: 0.5,
-  fps: 60
-})
+// Initialize game API with error handling
+let gameAPI: GameAPI
+try {
+  gameAPI = new GameAPI('game-canvas', {
+    width: 1024,
+    height: 576,
+    gravity: 0.5,
+    fps: 60
+  })
+} catch (error) {
+  console.error('Failed to initialize GameAPI:', error)
+  throw new Error('Game initialization failed. Please check the console for details.')
+}
 
 // Expose global API for external use (e.g., browser console, image recognition)
 ;(window as any).GameAPI = gameAPI
@@ -118,21 +128,54 @@ gameAPI.clearLevel()
     .setPlayerStart(100, 400)
     .addPlatform(0, 500, 1024, 76, 'ground'); // Ground platform
 
-// Test 1: Simple triangle
-const triangle = [[0, 500], [100, 0], [50, 50]];
-gameAPI.addPolygon(triangle);
+// Test polygons with validation
+function addSafePolygon(points: number[][], name: string) {
+  if (!points || points.length < 3) {
+    console.warn(`Skipping invalid polygon ${name}: needs at least 3 points`)
+    return
+  }
+  
+  // Validate each point
+  const validPoints = points.filter(point => {
+    if (!Array.isArray(point) || point.length !== 2) return false
+    if (typeof point[0] !== 'number' || typeof point[1] !== 'number') return false
+    if (!isFinite(point[0]) || !isFinite(point[1])) return false
+    return true
+  })
+  
+  if (validPoints.length < 3) {
+    console.warn(`Skipping polygon ${name}: insufficient valid points`)
+    return
+  }
+  
+  gameAPI.addPolygon(validPoints)
+  console.log(`Added ${name} with ${validPoints.length} points`)
+}
 
-// Test 2: Pentagon
-const pentagon = [[50, 0], [100, 30], [80, 80], [20, 80], [0, 30]];
-gameAPI.addPolygon(pentagon);
+// Test 1: Simple triangle
+const triangle = [[0, 500], [100, 400], [50, 450]]
+addSafePolygon(triangle, 'triangle')
+
+// Test 2: Pentagon  
+const pentagon = [[200, 450], [250, 420], [230, 480], [170, 480], [150, 430]]
+addSafePolygon(pentagon, 'pentagon')
 
 // Test 3: Hexagon
-const hexagon = [[30, 0], [90, 0], [120, 50], [90, 100], [30, 100], [0, 50]];
-gameAPI.addPolygon(hexagon);
+const hexagon = [[300, 420], [360, 420], [390, 450], [360, 480], [300, 480], [270, 450]]
+addSafePolygon(hexagon, 'hexagon')
 
 // Add some coins for interaction testing
-gameAPI.addCoin(250, 350)
-        .addCoin(450, 300)
-        .addCoin(650, 250);
-// loadCustomLevel(gameAPI.getEngine())
-gameAPI.buildLevel().startGame()
+try {
+  gameAPI.addCoin(250, 350)
+          .addCoin(450, 300)
+          .addCoin(650, 250)
+  
+  // Build and start the game with error handling
+  gameAPI.buildLevel().startGame().catch(error => {
+    console.error('Failed to start game:', error)
+    alert('Game failed to start. Please check the console for details.')
+  })
+} catch (error) {
+  console.error('Failed to build level:', error)
+  alert('Level building failed. Please check the console for details.')
+}

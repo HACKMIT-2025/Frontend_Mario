@@ -93,6 +93,11 @@ export class Player extends Entity {
   }
 
   public render(ctx: CanvasRenderingContext2D) {
+    if (!ctx) {
+      console.warn('Player render called with invalid context')
+      return
+    }
+    
     ctx.save()
 
     // Flash when invulnerable
@@ -172,6 +177,8 @@ export class Player extends Entity {
   }
 
   public handleInput(input: any) {
+    if (!input) return
+    
     const speed = this.isRunning ? this.runSpeed : this.moveSpeed
 
     // Horizontal movement
