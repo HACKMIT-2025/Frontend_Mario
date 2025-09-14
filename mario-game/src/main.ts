@@ -1,6 +1,5 @@
 import './style.css'
 import { GameAPI } from './engine'
-import levelData from '../../level_data.json'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
@@ -79,23 +78,25 @@ const spriteLoader = SpriteLoader.getInstance()
 ;(window as any).debugMode = () => debugMode.toggle()
 ;(window as any).showPlatforms = () => {
   console.log('🏗️ Platform Debug Info:')
-  if (gameAPI.engine.currentLevel) {
-    const platforms = gameAPI.engine.currentLevel.getPlatforms()
+  const platforms = gameAPI.getPlatforms()
+  if (platforms.length > 0) {
     platforms.forEach((platform: any, index: number) => {
       console.log(`Platform ${index}: type=${platform.type}, pos=(${platform.x},${platform.y}), size=${platform.width}x${platform.height}`)
     })
   } else {
-    console.log('No level loaded')
+    console.log('No platforms loaded')
   }
 }
 
 ;(window as any).showCollisions = () => {
   console.log('💥 Collision Debug Info:')
-  if (gameAPI.engine.entityManager) {
-    const entities = gameAPI.engine.entityManager.getEntities()
+  const entities = gameAPI.getEntities()
+  if (entities.length > 0) {
     entities.forEach((entity: any) => {
       console.log(`${entity.type}: pos=(${Math.round(entity.position.x)},${Math.round(entity.position.y)}), vel=(${Math.round(entity.velocity?.x || 0)},${Math.round(entity.velocity?.y || 0)})`)
     })
+  } else {
+    console.log('No entities loaded')
   }
 }
 
@@ -203,3 +204,5 @@ gameAPI.addGoal(scaledEndX, scaledEndY).buildLevel()
 gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
 
 gameAPI.startGame()
+// Load classic level as default
+// gameAPI.loadClassicLevel()

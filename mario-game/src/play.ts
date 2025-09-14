@@ -12,16 +12,6 @@ function hideLoading() {
   if (loading) loading.style.display = 'none'
 }
 
-// 显示错误
-function showError(message: string) {
-  hideLoading()
-  const error = document.getElementById('error')
-  const errorMessage = document.getElementById('error-message')
-  if (error && errorMessage) {
-    error.style.display = 'block'
-    errorMessage.textContent = message
-  }
-}
 
 async function initializePlayGame() {
   try {
@@ -70,12 +60,9 @@ async function initializePlayGame() {
 
     console.log('🎮 Play game started successfully!')
 
-    // 显示关卡信息
-    showLevelInfo(levelData)
 
   } catch (error) {
     console.error('❌ Failed to initialize play game:', error)
-    showError(error instanceof Error ? error.message : '初始化失败')
   }
 }
 
@@ -160,23 +147,6 @@ async function buildGameFromLevelData(levelData: LevelData) {
   console.log(`✅ Level built: ${polygonCount} platforms, ${coinCount} coins, ${enemyCount} enemies`)
 }
 
-function showLevelInfo(levelData: LevelData) {
-  const infoPanel = document.querySelector('.info-panel')
-  if (!infoPanel) return
-
-  // 创建关卡信息元素
-  const levelInfoDiv = document.createElement('div')
-  levelInfoDiv.innerHTML = `
-    <h3 style="margin-top: 20px;">📊 关卡信息</h3>
-    <p><strong>平台数量:</strong> ${levelData.rigid_bodies?.length || 0}</p>
-    <p><strong>金币数量:</strong> ${levelData.coins?.length || 0}</p>
-    <p><strong>敌人数量:</strong> ${levelData.enemies?.length || 0}</p>
-    <p><strong>起始点:</strong> ${levelData.starting_points?.length || 0}</p>
-    <p><strong>终点:</strong> ${levelData.end_points?.length || 0}</p>
-  `
-
-  infoPanel.appendChild(levelInfoDiv)
-}
 
 // 监听键盘事件
 document.addEventListener('keydown', (event) => {
@@ -229,7 +199,6 @@ document.addEventListener('visibilitychange', () => {
 // 错误处理
 window.addEventListener('unhandledrejection', (event) => {
   console.error('🚨 Unhandled promise rejection:', event.reason)
-  showError('游戏运行出错: ' + (event.reason?.message || '未知错误'))
 })
 
 // 初始化游戏

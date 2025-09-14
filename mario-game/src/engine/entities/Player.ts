@@ -293,6 +293,5 @@ export class Player extends Entity {
     this.invulnerable = false
     this.fireballEnabled = false
     this.velocity = { x: 0, y: 0 }
-    this.hasDoubleJumped = false
   }
 }
