@@ -1,5 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
+import levelData from '../../level_data.json'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')

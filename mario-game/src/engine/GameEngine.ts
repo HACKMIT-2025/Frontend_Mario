@@ -447,7 +447,7 @@ export class GameEngine {
     const formattedTime = this.elapsed_time.toFixed(2)
     const score = Math.max(
       0,
-      2000 + this.coins * 1000 - this.num_deaths * 200 - Math.floor(1000 * Math.exp(0.035 * this.elapsed_time))
+      1000 + this.coins * 1000 - this.num_deaths * 200 + Math.floor(1000 * Math.exp(-0.1 * this.elapsed_time))
     )
 
     // If in victory state, show victory screen instead of normal rendering
