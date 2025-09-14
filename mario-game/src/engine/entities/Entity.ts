@@ -13,6 +13,9 @@ export abstract class Entity {
   public dead = false
   public grounded = false
   public physics: EntityPhysics | null = null
+  public previousPosition?: { x: number; y: number }
+  public wallCollision: { left: boolean; right: boolean } = { left: false, right: false }
+  public ceilingCollision = false
 
   constructor(x: number, y: number, width: number, height: number, type: string) {
     this.position = { x, y }

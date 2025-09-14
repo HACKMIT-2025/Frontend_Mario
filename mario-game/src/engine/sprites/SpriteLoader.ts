@@ -76,20 +76,20 @@ export class SpriteLoader {
       this.loadSprite('player_down', './assets/characters/player_down.png', characterFrame)
     ])
 
-    // Load individual tiles with proper dimensions (use full image size)
+    // Load individual tiles (now from engine's own assets)
     await Promise.all([
-      this.loadSprite('grass', './assets/tiles/grass.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('brick', './assets/tiles/brick_block.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('question', './assets/tiles/question_block.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('pipe_top', './assets/tiles/pipe_top.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('pipe_body', './assets/tiles/pipe_body.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('super_mushroom', './assets/tiles/super_mushroom.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('goomba1', './assets/tiles/goomba_walk_01.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('goomba2', './assets/tiles/goomba_walk_02.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('terrain', './assets/tiles/terrain.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('mountain', './assets/tiles/mountain.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('tree', './assets/tiles/tree.png', [{ x: 0, y: 0, width: 256, height: 256 }]),
-      this.loadSprite('water', './assets/tiles/water.png', [{ x: 0, y: 0, width: 256, height: 256 }])
+      this.loadSprite('grass', './assets/tiles/grass.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('brick', './assets/tiles/brick_block.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('question', './assets/tiles/question_block.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('pipe_top', './assets/tiles/pipe_top.png', [{ x: 0, y: 0, width: 64, height: 32 }]),
+      this.loadSprite('pipe_body', './assets/tiles/pipe_body.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('super_mushroom', './assets/tiles/super_mushroom.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('goomba1', './assets/tiles/goomba_walk_01.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('goomba2', './assets/tiles/goomba_walk_02.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('terrain', './assets/tiles/terrain.png', [{ x: 0, y: 0, width: 32, height: 32 }]),
+      this.loadSprite('mountain', './assets/tiles/mountain.png', [{ x: 0, y: 0, width: 128, height: 128 }]),
+      this.loadSprite('tree', './assets/tiles/tree.png', [{ x: 0, y: 0, width: 64, height: 96 }]),
+      this.loadSprite('water', './assets/tiles/water.png', [{ x: 0, y: 0, width: 32, height: 32 }])
     ])
 
     // Coins now use original rendering (no sprites needed)
