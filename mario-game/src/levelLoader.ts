@@ -273,34 +273,52 @@ export class LevelLoader {
   static async loadLevelData(apiUrl?: string): Promise<LevelData> {
     const urlParams = new URLSearchParams(window.location.search)
 
+    console.log('🔍 Checking URL params:', window.location.search)
+    console.log('🔍 Available params:', Array.from(urlParams.entries()))
+
     // 1. 优先尝试从JSON URL直接加载（新功能）
     const jsonUrl = urlParams.get('json')
     if (jsonUrl) {
+      console.log(`🌐 Found JSON URL parameter: ${jsonUrl}`)
       try {
-        return await this.loadFromJSONUrl(jsonUrl)
+        const result = await this.loadFromJSONUrl(jsonUrl)
+        console.log('✅ Successfully loaded from JSON URL')
+        return result
       } catch (error) {
-        console.warn('⚠️ Failed to load from JSON URL, trying other methods...')
+        console.warn('⚠️ Failed to load from JSON URL:', error)
+        console.warn('⚠️ Trying other methods...')
       }
+    } else {
+      console.log('❌ No JSON URL parameter found')
     }
 
     // 2. 尝试从API获取levelId
     const levelId = this.getLevelId()
     if (levelId) {
+      console.log(`🆔 Found level ID: ${levelId}`)
       try {
-        return await this.fetchLevelData(levelId, apiUrl)
+        const result = await this.fetchLevelData(levelId, apiUrl)
+        console.log('✅ Successfully loaded from API')
+        return result
       } catch (error) {
-        console.warn('⚠️ Failed to fetch from API, trying URL fallback...')
+        console.warn('⚠️ Failed to fetch from API:', error)
+        console.warn('⚠️ Trying URL fallback...')
       }
+    } else {
+      console.log('❌ No level ID found')
     }
 
     // 3. 尝试从URL参数直接加载Base64数据
     const urlData = this.loadFromURL()
     if (urlData) {
+      console.log('✅ Successfully loaded from URL data')
       return urlData
+    } else {
+      console.log('❌ No URL data found')
     }
 
     // 4. 最后使用默认数据
-    console.log('📋 Using default level data')
+    console.log('📋 Using default level data (fallback)')
     return this.getDefaultLevelData()
   }
 }
