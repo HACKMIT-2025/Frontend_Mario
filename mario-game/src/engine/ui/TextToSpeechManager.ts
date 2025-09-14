@@ -23,16 +23,16 @@ export class TextToSpeechManager {
   }
 
   private loadVoices(): void {
-    this.voices = this.synth.getVoices()
+    this.voices = this.synth?.getVoices() || []
 
     // Try to find a good English voice
-    this.currentVoice = this.voices.find(voice =>
+    this.currentVoice = this.voices?.find(voice =>
       voice.lang.startsWith('en') && voice.name.toLowerCase().includes('google')
-    ) || this.voices.find(voice =>
+    ) || this.voices?.find(voice =>
       voice.lang.startsWith('en') && voice.name.toLowerCase().includes('male')
-    ) || this.voices.find(voice =>
+    ) || this.voices?.find(voice =>
       voice.lang.startsWith('en')
-    ) || this.voices[0] || null
+    ) || (this.voices && this.voices.length > 0 ? this.voices[0] : null) || null
   }
 
   public speak(text: string, type: 'teasing' | 'story' | 'info' = 'teasing'): void {

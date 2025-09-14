@@ -150,10 +150,10 @@ async function buildGameFromLevelData(levelData: LevelData) {
     })
   }
 
-  // 添加钉刺（新功能，来自本地引擎）
+  // 添加钉刺（学习本地引擎逻辑）
   let spikeCount = 0
-  if ((levelData as any).spikes && (levelData as any).spikes.length > 0) {
-    (levelData as any).spikes.forEach((spike: any, index: number) => {
+  if (levelData.spikes && levelData.spikes.length > 0) {
+    levelData.spikes.forEach((spike, index) => {
       try {
         const [spikeX, spikeY] = spike.coordinates
         gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
@@ -186,8 +186,47 @@ async function buildGameFromLevelData(levelData: LevelData) {
   gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
 
   console.log(`✅ Level built: ${polygonCount} platforms, ${coinCount} coins, ${spikeCount} spikes, ${enemyCount} enemies`)
+
+  // 配置AI对话系统（学习本地引擎）
+  await configureAIDialogSystem(gameAPI)
 }
 
+// 配置AI对话系统
+async function configureAIDialogSystem(gameAPI: GameAPI) {
+  try {
+    console.log('🤖 Configuring AI dialog system...')
+
+    // 获取对话生成器
+    const dialogGenerator = gameAPI.getEngine().getDialogGenerator()
+
+    // 配置OpenRouter API密钥
+    if (import.meta.env.VITE_OPENROUTER_API_KEY) {
+      dialogGenerator.configureOpenRouter(import.meta.env.VITE_OPENROUTER_API_KEY)
+
+      // 测试连接
+      const isConnected = await dialogGenerator.testOpenRouterConnection()
+      console.log('🌐 AI system ready:', isConnected)
+
+      // 启用AI
+      const success = dialogGenerator.enableAI()
+      console.log('🤖 AI enabled:', success)
+
+      // 检查AI是否启用
+      const isAIEnabled = dialogGenerator.isAIEnabled()
+      console.log('🔍 Is AI enabled?', isAIEnabled)
+
+      if (isAIEnabled) {
+        console.log('✅ AI dialog system configured successfully')
+      } else {
+        console.warn('⚠️ AI system failed to enable')
+      }
+    } else {
+      console.warn('⚠️ VITE_OPENROUTER_API_KEY not found, AI dialog system disabled')
+    }
+  } catch (error) {
+    console.error('❌ Error configuring AI dialog system:', error)
+  }
+}
 
 // 监听键盘事件
 document.addEventListener('keydown', (event) => {

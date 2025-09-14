@@ -17,6 +17,9 @@ export interface LevelData {
     y: number
     type: string
   }>
+  spikes?: Array<{
+    coordinates: [number, number]
+  }>
 }
 
 export class LevelLoader {
@@ -176,6 +179,26 @@ export class LevelLoader {
         })
 
       console.log('🪙 Processed coins:', validated.coins?.length || 0, 'found')
+    }
+
+    // 验证钉刺（可选，学习本地引擎逻辑）
+    if (data.spikes && Array.isArray(data.spikes)) {
+      validated.spikes = data.spikes
+        .filter((spike: any) => {
+          // Support coordinates format from image recognition, like local engine
+          return spike.coordinates && Array.isArray(spike.coordinates) && spike.coordinates.length >= 2
+        })
+        .map((spike: any) => {
+          const [x, y] = spike.coordinates
+          return {
+            coordinates: [
+              Math.max(0, Math.min(1024, x)),
+              Math.max(0, Math.min(576, y))
+            ] as [number, number]
+          }
+        })
+
+      console.log('🔺 Processed spikes:', validated.spikes?.length || 0, 'found')
     }
 
     // 验证敌人（可选）

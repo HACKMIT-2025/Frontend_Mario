@@ -1,6 +1,73 @@
 import './style.css'
 import { GameAPI } from './engine'
-import levelData from '../../level_data.json'
+
+// Default level data (embedded to avoid deployment issues)
+const levelData = {
+  "starting_points": [
+    {
+      "coordinates": [100, 400],
+      "area": 100.0,
+      "contour_id": 1,
+      "shape_type": "hexagon"
+    }
+  ],
+  "end_points": [
+    {
+      "coordinates": [900, 400],
+      "area": 100.0,
+      "contour_id": 2,
+      "shape_type": "cross"
+    }
+  ],
+  "spikes": [
+    {
+      "coordinates": [400, 450],
+      "area": 100.0,
+      "contour_id": 3,
+      "shape_type": "triangle"
+    }
+  ],
+  "coins": [
+    {
+      "coordinates": [350, 400],
+      "area": 50.0,
+      "contour_id": 4,
+      "shape_type": "circle"
+    },
+    {
+      "coordinates": [500, 300],
+      "area": 50.0,
+      "contour_id": 5,
+      "shape_type": "circle"
+    }
+  ],
+  "rigid_bodies": [
+    {
+      "bounding_box": [0, 550, 1024, 26],
+      "centroid": [512, 563],
+      "area": 26624.0,
+      "contour_id": 0,
+      "contour_points": [
+        [0, 550],
+        [1024, 550],
+        [1024, 576],
+        [0, 576]
+      ]
+    },
+    {
+      "bounding_box": [300, 450, 100, 20],
+      "centroid": [350, 460],
+      "area": 2000.0,
+      "contour_id": 6,
+      "contour_points": [
+        [300, 450],
+        [400, 450],
+        [400, 470],
+        [300, 470]
+      ]
+    }
+  ]
+}
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
