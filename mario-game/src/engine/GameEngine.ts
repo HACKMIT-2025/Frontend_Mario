@@ -491,4 +491,13 @@ export class GameEngine {
   public addScore(points: number) { this.score += points }
   public addCoin() { this.coins++ }
   public addLife() { this.lives++ }
+  public getScore(): number { return this.score }
+  public getLives(): number { return this.lives }
+  public getCoins(): number { return this.coins }
+  public getPlatforms(): Platform[] {
+    return this.currentLevel ? this.currentLevel.getPlatforms() : []
+  }
+  public getEntities(): Entity[] {
+    return this.entityManager.getEntities()
+  }
 }

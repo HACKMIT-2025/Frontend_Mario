@@ -43,8 +43,6 @@ export class Player extends Entity {
   }
 
   public update(dt: number) {
-    const previousState = this.state
-
     // Update state based on velocity
     if (this.velocity.y < -0.5) {
       this.state = 'jumping'
@@ -112,8 +110,6 @@ export class Player extends Entity {
       ctx.globalAlpha = 0.5
     }
 
-    // Get current animation frame
-    const frameIndex = this.animationController.getCurrentFrame()
     // Keep aspect ratio similar to sprite (64x96), but scale to game size
     const height = this.size === 'big' ? 48 : 32
     const width = this.size === 'big' ? 32 : 21

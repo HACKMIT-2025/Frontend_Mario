@@ -104,7 +104,7 @@ export function buildLevelFromAnalysisData(
 
   // 处理刚体/平台
   if (data.rigid_bodies) {
-    data.rigid_bodies.forEach((body, index) => {
+    data.rigid_bodies.forEach((body, _index) => {
       const [x, y, width, height] = body.bounding_box
 
       // 根据尺寸判断平台类型
