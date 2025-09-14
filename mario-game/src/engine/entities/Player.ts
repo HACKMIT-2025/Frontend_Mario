@@ -93,6 +93,11 @@ export class Player extends Entity {
   }
 
   public render(ctx: CanvasRenderingContext2D) {
+    if (!ctx) {
+      console.warn('Player render called with invalid context')
+      return
+    }
+    
     ctx.save()
 
     // Flash when invulnerable
@@ -172,17 +177,19 @@ export class Player extends Entity {
   }
 
   public handleInput(input: any) {
+    if (!input) return
+
     const speed = this.isRunning ? this.runSpeed : this.moveSpeed
 
-    // Horizontal movement
-    if (input.left) {
+    // Horizontal movement - respect wall collisions
+    if (input.left && !this.wallCollision.left) {
       this.velocity.x = -speed
-    } else if (input.right) {
+    } else if (input.right && !this.wallCollision.right) {
       this.velocity.x = speed
     }
 
-    // Jump
-    if (input.jump && this.grounded) {
+    // Jump - respect ceiling collision
+    if (input.jump && this.grounded && !this.ceilingCollision) {
       this.velocity.y = -this.jumpPower
     }
 
@@ -198,6 +205,34 @@ export class Player extends Entity {
     if (input.action && this.fireballEnabled) {
       this.throwFireball()
     }
+  }
+
+  // Method to check if movement would cause collision (called by GameEngine)
+  public wouldCollideWithPlatforms(deltaX: number, deltaY: number, platforms: any[]): boolean {
+    const testPosition = {
+      x: this.position.x + deltaX,
+      y: this.position.y + deltaY,
+      width: this.width,
+      height: this.height
+    }
+
+    for (const platform of platforms) {
+      const platformBox = {
+        x: platform.position?.x ?? platform.x,
+        y: platform.position?.y ?? platform.y,
+        width: platform.width,
+        height: platform.height
+      }
+
+      // Check AABB collision
+      if (testPosition.x < platformBox.x + platformBox.width &&
+          testPosition.x + testPosition.width > platformBox.x &&
+          testPosition.y < platformBox.y + platformBox.height &&
+          testPosition.y + testPosition.height > platformBox.y) {
+        return true
+      }
+    }
+    return false
   }
 
   public grow() {

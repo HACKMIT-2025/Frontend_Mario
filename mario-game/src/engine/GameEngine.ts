@@ -42,7 +42,11 @@ export class GameEngine {
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
     this.canvas = canvas
-    this.ctx = canvas.getContext('2d')!
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('Failed to get 2D rendering context from canvas')
+    }
+    this.ctx = context
 
     // Set canvas size
     this.canvas.width = config.width || 1024
@@ -65,6 +69,17 @@ export class GameEngine {
 
   private setupDemoLevel() {
     this.currentLevel = new Level()
+
+    const worldWidth = 3000
+    const worldHeight = 600
+
+    // Add invisible boundary walls to prevent wall clipping
+    // Left boundary wall
+    this.currentLevel.addPlatform(-50, -100, 50, worldHeight + 200, 'boundary')
+    // Right boundary wall
+    this.currentLevel.addPlatform(worldWidth, -100, 50, worldHeight + 200, 'boundary')
+    // Top boundary (ceiling)
+    this.currentLevel.addPlatform(-50, -100, worldWidth + 100, 50, 'boundary')
 
     // Add some platforms
     this.currentLevel.addPlatform(0, 500, 2000, 76, 'platform')
@@ -131,11 +146,11 @@ export class GameEngine {
   }
 
   // Getters for debug access
-  public get currentLevel() {
+  public getCurrentLevel() {
     return this.currentLevel
   }
 
-  public get entityManager() {
+  public getEntityManager() {
     return this.entityManager
   }
 
@@ -188,8 +203,10 @@ export class GameEngine {
 
     // Update physics for all entities
     const entities = this.entityManager.getEntities()
+    const platforms = this.currentLevel?.getPlatforms() || []
+
     entities.forEach(entity => {
-      this.physics.updateEntity(entity, dt)
+      this.physics.updateEntity(entity, dt, platforms)
     })
 
     // Check collisions
@@ -219,14 +236,10 @@ export class GameEngine {
     const platforms = this.currentLevel?.getPlatforms() || []
     const polygons = this.currentLevel?.getPolygons() || []
 
-    // Check entity vs platform collisions
-    entities.forEach(entity => {
-      platforms.forEach(platform => {
-        this.physics.checkPlatformCollision(entity, platform)
-      })
-    })
+    // Note: Basic platform collisions are now handled by Swept AABB in updateEntity
+    // We only need additional collision checks here
 
-    // Check entity vs polygon collisions
+    // Check entity vs polygon collisions (still needed for complex shapes)
     entities.forEach(entity => {
       polygons.forEach(polygon => {
         this.physics.checkPolygonCollision(entity, polygon)
@@ -236,7 +249,7 @@ export class GameEngine {
     // Check player vs other entities
     if (this.player) {
       entities.forEach(entity => {
-        if (entity !== this.player && this.physics.checkEntityCollision(this.player!, entity)) {
+        if (entity !== this.player && this.player && this.physics.checkEntityCollision(this.player, entity)) {
           this.handlePlayerCollision(entity)
         }
       })
@@ -265,13 +278,41 @@ export class GameEngine {
     const worldWidth = 3000  // Match the ground width
     const worldHeight = 600  // Allow some space above and below
 
-    // Horizontal boundaries
+    // Store if collision occurred to prevent momentum issues
+    let collisionOccurred = false
+
+    // Horizontal boundaries - use similar logic to platform collision
     if (entity.position.x < 0) {
-      entity.position.x = 0
-      entity.velocity.x = Math.max(0, entity.velocity.x) // Stop leftward movement
+      // Check if entity was moving from inside the world
+      const prevX = entity.previousPosition ? entity.previousPosition.x : entity.position.x - entity.velocity.x
+      if (prevX >= 0) {
+        // Entity was inside and moved out - proper collision
+        entity.position.x = 0
+        entity.velocity.x = 0  // Completely stop horizontal movement
+        collisionOccurred = true
+      } else {
+        // Entity was already outside - just clamp position
+        entity.position.x = 0
+        entity.velocity.x = Math.max(0, entity.velocity.x)
+      }
     } else if (entity.position.x + entity.width > worldWidth) {
-      entity.position.x = worldWidth - entity.width
-      entity.velocity.x = Math.min(0, entity.velocity.x) // Stop rightward movement
+      // Check if entity was moving from inside the world
+      const prevX = entity.previousPosition ? entity.previousPosition.x : entity.position.x - entity.velocity.x
+      if (prevX + entity.width <= worldWidth) {
+        // Entity was inside and moved out - proper collision
+        entity.position.x = worldWidth - entity.width
+        entity.velocity.x = 0  // Completely stop horizontal movement
+        collisionOccurred = true
+      } else {
+        // Entity was already outside - just clamp position
+        entity.position.x = worldWidth - entity.width
+        entity.velocity.x = Math.min(0, entity.velocity.x)
+      }
+    }
+
+    // If collision occurred, also update previous position to prevent oscillation
+    if (collisionOccurred && entity.previousPosition) {
+      entity.previousPosition.x = entity.position.x
     }
 
     // Vertical boundaries (mainly for falling off the world)
@@ -286,16 +327,18 @@ export class GameEngine {
   }
 
   private handlePlayerCollision(entity: any) {
+    if (!entity || !this.player) return
+    
     if (entity.type === 'coin') {
       this.coins++
       this.score += 10
       entity.dead = true
     } else if (entity.type === 'enemy') {
-      if (this.player!.velocity.y > 0 && this.player!.position.y < entity.position.y) {
+      if (this.player.velocity.y > 0 && this.player.position.y < entity.position.y) {
         // Player jumping on enemy
         this.score += 100
         entity.dead = true
-        this.player!.velocity.y = -10 // Bounce
+        this.player.velocity.y = -10 // Bounce
       } else {
         // Player hit by enemy
         this.playerHit()
@@ -307,10 +350,10 @@ export class GameEngine {
   }
 
   private playerHit() {
-    if (this.player!.invulnerable) return
+    if (!this.player || this.player.invulnerable) return
 
-    if (this.player!.size === 'big') {
-      this.player!.shrink()
+    if (this.player.size === 'big') {
+      this.player.shrink()
     } else {
       this.lives--
       if (this.lives <= 0) {
@@ -332,17 +375,19 @@ export class GameEngine {
   }
 
   private handlePowerUp(type: string) {
+    if (!this.player) return
+    
     switch(type) {
       case 'mushroom':
-        this.player!.grow()
+        this.player.grow()
         this.score += 50
         break
       case 'star':
-        this.player!.makeInvulnerable(10000) // 10 seconds
+        this.player.makeInvulnerable(10000) // 10 seconds
         this.score += 100
         break
       case 'flower':
-        this.player!.enableFireball()
+        this.player.enableFireball()
         this.score += 50
         break
     }
@@ -430,10 +475,8 @@ export class GameEngine {
   }
 
   // Public API methods
-  public getEntityManager() { return this.entityManager }
   public getPhysicsEngine() { return this.physics }
   public getCamera() { return this.camera }
-  public getCurrentLevel() { return this.currentLevel }
   public getPlayer() { return this.player }
   public setPlayer(player: Player) {
     this.player = player

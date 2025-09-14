@@ -100,7 +100,7 @@ export class Renderer {
     // Set polygon style
     this.ctx.fillStyle = '#666666' // Gray for now, can be customized
     this.ctx.strokeStyle = '#444444'
-    this.ctx.lineWidth = 2
+    this.ctx.lineWidth = 6 // Increased from 2 to 6 for thicker outline
 
     // Draw polygon
     this.ctx.beginPath()
@@ -120,6 +120,11 @@ export class Renderer {
   }
 
   private renderPlatform(platform: any) {
+    // Skip rendering invisible platforms
+    if (platform.invisible) {
+      return
+    }
+
     this.ctx.save()
 
     switch(platform.type) {
@@ -280,6 +285,7 @@ export class Renderer {
         this.ctx.fillText('★', platform.x + platform.width / 2, platform.y + 50)
         break
 
+      case 'ground':
       case 'platform':
         let grassDrawn = true
         let terrainDrawn = true
@@ -331,7 +337,7 @@ export class Renderer {
           }
         }
 
-        this.debugMode.logPlatformRender('platform', grassDrawn && terrainDrawn)
+        this.debugMode.logPlatformRender(platform.type, grassDrawn && terrainDrawn)
         break
 
       case 'underground':

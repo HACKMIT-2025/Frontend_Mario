@@ -6,8 +6,30 @@ export class Polygon {
   public isGoal = false
 
   constructor(contours: number[][], type = 'polygon') {
-    this.contours = contours
+    // Validate and sanitize contours
+    this.contours = this.validateContours(contours)
     this.type = type
+  }
+
+  private validateContours(contours: number[][]): number[][] {
+    if (!Array.isArray(contours)) {
+      console.warn('Polygon contours must be an array')
+      return []
+    }
+
+    const validContours = contours.filter(point => {
+      if (!Array.isArray(point) || point.length !== 2) return false
+      if (typeof point[0] !== 'number' || typeof point[1] !== 'number') return false
+      if (!isFinite(point[0]) || !isFinite(point[1])) return false
+      return true
+    })
+
+    if (validContours.length < 3) {
+      console.warn(`Polygon needs at least 3 valid points, got ${validContours.length}`)
+      return []
+    }
+
+    return validContours
   }
 
   public getBounds() {
@@ -21,8 +43,13 @@ export class Polygon {
     let maxY = this.contours[0][1]
 
     for (let i = 1; i < this.contours.length; i++) {
-      const pointX = this.contours[i][0]
-      const pointY = this.contours[i][1]
+      const point = this.contours[i]
+      if (!point || point.length < 2) continue
+      
+      const pointX = point[0]
+      const pointY = point[1]
+      
+      if (!isFinite(pointX) || !isFinite(pointY)) continue
 
       minX = Math.min(minX, pointX)
       maxX = Math.max(maxX, pointX)
@@ -75,9 +102,12 @@ export class Polygon {
   }
 
   public intersects(other: Polygon): boolean {
+    if (!other || !other.contours) return false
+    
     const thisBounds = this.getBounds()
     const otherBounds = other.getBounds()
 
+    // Quick AABB check first
     if (thisBounds.right < otherBounds.left ||
         otherBounds.right < thisBounds.left ||
         thisBounds.bottom < otherBounds.top ||
@@ -85,6 +115,7 @@ export class Polygon {
       return false
     }
 
+    // More detailed intersection check would go here if needed
     return true
   }
 

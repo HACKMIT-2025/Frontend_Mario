@@ -2,8 +2,12 @@ import './style.css'
 import { GameAPI } from './engine'
 import levelData from '../level_data.json'
 
-// Initialize game container
-const app = document.querySelector<HTMLDivElement>('#app')!
+// Initialize game container with error handling
+const app = document.querySelector<HTMLDivElement>('#app')
+if (!app) {
+  throw new Error('App container not found! Make sure you have a div with id="app" in your HTML.')
+}
+
 app.innerHTML = `
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
@@ -15,13 +19,19 @@ app.innerHTML = `
   </div>
 `
 
-// Initialize game API
-const gameAPI: GameAPI = new GameAPI('game-canvas', {
-  width: 1024,
-  height: 576,
-  gravity: 0.5,
-  fps: 60
-})
+// Initialize game API with error handling
+let gameAPI: GameAPI
+try {
+  gameAPI = new GameAPI('game-canvas', {
+    width: 1024,
+    height: 576,
+    gravity: 0.5,
+    fps: 60
+  })
+} catch (error) {
+  console.error('Failed to initialize GameAPI:', error)
+  throw new Error('Game initialization failed. Please check the console for details.')
+}
 
 // Expose global API for external use (e.g., browser console, image recognition)
 ;(window as any).GameAPI = gameAPI
