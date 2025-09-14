@@ -152,16 +152,16 @@ function addSafePolygon(points: number[][], name: string) {
   console.log(`Added ${name} with ${validPoints.length} points`)
 }
 
-// Test 1: Proper triangle with good proportions
-const triangle = [[150, 400], [200, 350], [100, 350]]
+// Test 1: Simple triangle
+const triangle = [[0, 500], [100, 400], [50, 450]]
 addSafePolygon(triangle, 'triangle')
 
 // Test 2: Pentagon  
-const pentagon = [[250, 400], [300, 380], [280, 430], [220, 430], [200, 390]]
+const pentagon = [[200, 450], [250, 420], [230, 480], [170, 480], [150, 430]]
 addSafePolygon(pentagon, 'pentagon')
 
 // Test 3: Hexagon
-const hexagon = [[400, 380], [450, 380], [470, 410], [450, 440], [400, 440], [380, 410]]
+const hexagon = [[300, 420], [360, 420], [390, 450], [360, 480], [300, 480], [270, 450]]
 addSafePolygon(hexagon, 'hexagon')
 
 // Add some coins for interaction testing

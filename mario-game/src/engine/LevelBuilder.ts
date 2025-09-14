@@ -63,53 +63,7 @@ export class LevelBuilder {
   }
 
   public addPlatform(x: number, y: number, width: number, height: number, type = 'normal'): this {
-    // For ground/platform types, create multiple 32x32 blocks to tile the area
-    if (type === 'ground' || type === 'platform') {
-      // Calculate how many 32x32 blocks we need
-      const blockSize = 32
-      const blocksX = Math.ceil(width / blockSize)
-      const blocksY = Math.ceil(height / blockSize)
-      
-      for (let i = 0; i < blocksX; i++) {
-        for (let j = 0; j < blocksY; j++) {
-          const blockX = x + i * blockSize
-          const blockY = y + j * blockSize
-          
-          // Calculate actual block dimensions (may be smaller at edges)
-          const blockWidth = Math.min(blockSize, width - i * blockSize)
-          const blockHeight = Math.min(blockSize, height - j * blockSize)
-          
-          // For the top row, use grass blocks
-          if (j === 0) {
-            this.levelData.platforms.push({ 
-              x: blockX, 
-              y: blockY, 
-              width: blockWidth, 
-              height: Math.min(blockSize, blockHeight), 
-              type: 'grass_block' 
-            })
-          }
-          // For remaining rows, use terrain blocks
-          if (j > 0 || blocksY === 1) {
-            const terrainY = j === 0 ? blockY + Math.min(blockSize, blockHeight) : blockY
-            const terrainHeight = j === 0 ? Math.max(0, blockHeight - blockSize) : blockHeight
-            
-            if (terrainHeight > 0) {
-              this.levelData.platforms.push({ 
-                x: blockX, 
-                y: terrainY, 
-                width: blockWidth, 
-                height: terrainHeight, 
-                type: 'terrain_block' 
-              })
-            }
-          }
-        }
-      }
-    } else {
-      // For other platform types, use the original single platform approach
-      this.levelData.platforms.push({ x, y, width, height, type })
-    }
+    this.levelData.platforms.push({ x, y, width, height, type })
     return this
   }
 
