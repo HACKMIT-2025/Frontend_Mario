@@ -155,11 +155,27 @@ export class LevelLoader {
     // 验证金币（可选）
     if (data.coins && Array.isArray(data.coins)) {
       validated.coins = data.coins
-        .filter((coin: any) => typeof coin.x === 'number' && typeof coin.y === 'number')
-        .map((coin: any) => ({
-          x: Math.max(0, Math.min(1024, coin.x)),
-          y: Math.max(0, Math.min(576, coin.y))
-        }))
+        .filter((coin: any) => {
+          // Support both formats: {x, y} and {coordinates: [x, y]}
+          return (typeof coin.x === 'number' && typeof coin.y === 'number') ||
+                 (coin.coordinates && Array.isArray(coin.coordinates) && coin.coordinates.length >= 2)
+        })
+        .map((coin: any) => {
+          // Handle both formats
+          let x, y
+          if (coin.coordinates && Array.isArray(coin.coordinates)) {
+            [x, y] = coin.coordinates
+          } else {
+            x = coin.x
+            y = coin.y
+          }
+          return {
+            x: Math.max(0, Math.min(1024, x)),
+            y: Math.max(0, Math.min(576, y))
+          }
+        })
+
+      console.log('🪙 Processed coins:', validated.coins?.length || 0, 'found')
     }
 
     // 验证敌人（可选）
