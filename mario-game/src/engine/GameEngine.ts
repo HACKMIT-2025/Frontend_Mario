@@ -48,6 +48,7 @@ export class GameEngine {
   private goal_y
   private start_x
   private start_y
+  // @ts-ignore - Used for external API compatibility
   private levelData: LevelData | null = null
   private spritesInitialized = false
 
@@ -85,6 +86,8 @@ export class GameEngine {
 
   public loadLevel(level: Level) {
     this.currentLevel = level
+    // Store player reference before clearing
+    const currentPlayer = this.player
     this.entityManager.clear()
 
     // Load level entities first
@@ -92,14 +95,15 @@ export class GameEngine {
       this.entityManager.addEntity(entity)
     })
 
-    // Always add player back if exists
-    if (this.player) {
-      this.entityManager.addEntity(this.player)
+    // Always add player back if exists (avoid duplicate adds)
+    if (currentPlayer && !this.entityManager.getEntities().includes(currentPlayer)) {
+      this.entityManager.addEntity(currentPlayer)
     }
   }
 
   public setLevelData(data: LevelData) {
     this.levelData = data
+    // Store for API compatibility, currently not used internally
   }
 
   public async initialize() {
@@ -153,11 +157,9 @@ export class GameEngine {
     });
 
     this.player?.setPos(this.start_x!, this.start_y!)
-    if (this.levelData?.coins) {
-      this.levelData.coins.forEach((coin) => {
-        this.currentLevel?.addCoin(coin.x, coin.y)
-      })
-    }
+
+    // Don't re-add coins here - they should already be in the level from initial build
+
     this.loadLevel(this.currentLevel!)
     this.victoryState = false  // Reset victory state
     this.updateUI()
@@ -537,6 +539,10 @@ export class GameEngine {
   public getCamera() { return this.camera }
   public getPlayer() { return this.player }
   public setPlayer(player: Player) {
+    // Remove existing player if any
+    if (this.player) {
+      this.entityManager.removeEntity(this.player)
+    }
     this.player = player
     this.entityManager.addEntity(player)
   }
