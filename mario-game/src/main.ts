@@ -1,6 +1,5 @@
 import './style.css'
 import { GameAPI } from './engine'
-import levelData from '../../level_data.json'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
@@ -47,23 +46,25 @@ const spriteLoader = SpriteLoader.getInstance()
 ;(window as any).debugMode = () => debugMode.toggle()
 ;(window as any).showPlatforms = () => {
   console.log('🏗️ Platform Debug Info:')
-  if (gameAPI.engine.currentLevel) {
-    const platforms = gameAPI.engine.currentLevel.getPlatforms()
+  const platforms = gameAPI.getPlatforms()
+  if (platforms.length > 0) {
     platforms.forEach((platform: any, index: number) => {
       console.log(`Platform ${index}: type=${platform.type}, pos=(${platform.x},${platform.y}), size=${platform.width}x${platform.height}`)
     })
   } else {
-    console.log('No level loaded')
+    console.log('No platforms loaded')
   }
 }
 
 ;(window as any).showCollisions = () => {
   console.log('💥 Collision Debug Info:')
-  if (gameAPI.engine.entityManager) {
-    const entities = gameAPI.engine.entityManager.getEntities()
+  const entities = gameAPI.getEntities()
+  if (entities.length > 0) {
     entities.forEach((entity: any) => {
       console.log(`${entity.type}: pos=(${Math.round(entity.position.x)},${Math.round(entity.position.y)}), vel=(${Math.round(entity.velocity?.x || 0)},${Math.round(entity.velocity?.y || 0)})`)
     })
+  } else {
+    console.log('No entities loaded')
   }
 }
 
@@ -123,67 +124,5 @@ GameAPI.importJSON(json)
 GameAPI.generateFromImageData(imageData)
 `)
 
-// Load custom level based on level_data.json
-gameAPI.clearLevel()
-
-// gameAPI.loadClassicLevel()
-
-// gameAPI.buildLevel().startGame()
-
-// Add starting point (Mario spawn location) from level_data.json
-const startPoint = levelData.starting_points[0]
-if (startPoint) {
-  const [startX, startY] = startPoint.coordinates
-  console.log(`Original Start Point: (${startX}, ${startY})`)
-  gameAPI.setPlayerStart(startX, startY)
-} else {
-  gameAPI.setPlayerStart(100, 400) // fallback
-}
-
-// Add end point (goal pipe) from level_data.json
-const endPoint = levelData.end_points[0]
-if (endPoint) {
-  const [endX, endY] = endPoint.coordinates
-  const scaledEndX = endX
-  const scaledEndY = endY - 30
-  gameAPI.addGoalPipe(scaledEndX, scaledEndY)
-}
-
-const coins = levelData.coins
-coins.forEach((coin) => {
-  const [coinX, coinY] = coin.coordinates
-  gameAPI.addCoin(coinX, coinY)
-})
-
-const spikes = levelData.spikes
-spikes.forEach((spike) => {
-  const [spikeX, spikeY] = spike.coordinates
-  gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
-})
-
-// Add ground platform for safety
-// gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
-
-// Add demo spikes to showcase the new addSpike functionality
-// // Large spike (64x64)
-// gameAPI.addSpike(300, 400, 64)
-// // Medium spike (48x48)
-// gameAPI.addSpike(400, 416, 48)
-// // Standard spike (32x32)
-// gameAPI.addSpike(500, 432, 32)
-
-// Add rigid bodies as polygons from level_data.json
-levelData.rigid_bodies.forEach((rigidBody) => {
-  // Scale contour points to fit game world
-  const scaledContours = rigidBody.contour_points.map(point => {
-    const [x, y] = point
-    return [
-      x, y
-    ]
-  })
-
-  // Add polygon with scaled coordinates
-  gameAPI.addPolygon(scaledContours, 'polygon')
-})
-// loadCustomLevel(gameAPI.getEngine())
-gameAPI.buildLevel().startGame()
+// Load classic level as default
+gameAPI.loadClassicLevel()
