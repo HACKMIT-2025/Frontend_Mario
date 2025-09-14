@@ -1,5 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
+import levelData from '../../level_data.json'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
@@ -200,7 +201,10 @@ levelData.rigid_bodies.forEach((rigidBody) => {
   gameAPI.addPolygon(scaledContours, 'polygon')
 })
 // loadCustomLevel(gameAPI.getEngine())
-gameAPI.addGoal(scaledEndX, scaledEndY).buildLevel()
+if (scaledEndX !== undefined && scaledEndY !== undefined) {
+  gameAPI.addGoal(scaledEndX, scaledEndY)
+}
+gameAPI.buildLevel()
 gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
 
 gameAPI.startGame()

@@ -303,12 +303,12 @@ export class GameAPI {
     return this.engine
   }
 
-  // /**
-  //  * Get current player score
-  //  */
-  // getScore(): number {
-  //   return this.engine.getScore ? this.engine.getScore() : 0
-  // }
+  /**
+   * Get current player score
+   */
+  getScore(): number {
+    return 0 // Score system removed, return 0 for compatibility
+  }
 
   /**
    * Get platforms for debugging

@@ -48,7 +48,7 @@ export class GameEngine {
   private goal_y
   private start_x
   private start_y
-  private levelData: LevelData
+  private levelData: LevelData | null = null
   private spritesInitialized = false
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
@@ -153,10 +153,11 @@ export class GameEngine {
     });
 
     this.player?.setPos(this.start_x!, this.start_y!)
-    // const coins = this.levelData.coins
-    // coins.forEach((coin) => {
-    //   this.currentLevel?.addCoin(coin.x, coin.y)
-    // });
+    if (this.levelData?.coins) {
+      this.levelData.coins.forEach((coin) => {
+        this.currentLevel?.addCoin(coin.x, coin.y)
+      })
+    }
     this.loadLevel(this.currentLevel!)
     this.victoryState = false  // Reset victory state
     this.updateUI()
