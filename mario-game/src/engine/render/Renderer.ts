@@ -4,8 +4,8 @@ import { SpriteLoader } from '../sprites/SpriteLoader'
 import { DebugMode } from '../debug/DebugMode'
 
 export interface UIData {
-  score: number
-  lives: number
+  elapsed_time: number
+  num_deaths: number
   coins: number
 }
 
@@ -92,6 +92,12 @@ export class Renderer {
     polygons.forEach(polygon => {
       this.renderPolygon(polygon)
     })
+
+    // Render goal star
+    const goal = level.getGoal()
+    if (goal) {
+      this.renderGoalStar(goal.x, goal.y)
+    }
   }
 
   private renderPolygon(polygon: any) {
@@ -115,6 +121,47 @@ export class Renderer {
 
     this.ctx.fill()
     this.ctx.stroke()
+
+    this.ctx.restore()
+  }
+
+  private renderGoalStar(x: number, y: number) {
+    this.ctx.save()
+
+    const centerX = x + 16 // Center the star in a 32x32 area
+    const centerY = y + 16
+    const outerRadius = 20
+    const innerRadius = 8
+    const spikes = 5
+
+    // Draw green star
+    this.ctx.fillStyle = '#00FF00' // Bright green
+    this.ctx.strokeStyle = '#00AA00' // Darker green outline
+    this.ctx.lineWidth = 2
+
+    this.ctx.beginPath()
+    
+    for (let i = 0; i < spikes * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius
+      const angle = (i * Math.PI) / spikes
+      const starX = centerX + Math.cos(angle) * radius
+      const starY = centerY + Math.sin(angle) * radius
+      
+      if (i === 0) {
+        this.ctx.moveTo(starX, starY)
+      } else {
+        this.ctx.lineTo(starX, starY)
+      }
+    }
+    
+    this.ctx.closePath()
+    this.ctx.fill()
+    this.ctx.stroke()
+
+    // Add a glowing effect
+    this.ctx.shadowColor = '#00FF00'
+    this.ctx.shadowBlur = 10
+    this.ctx.fill()
 
     this.ctx.restore()
   }
@@ -419,12 +466,12 @@ export class Renderer {
 
   public renderUI(data: UIData) {
     // Update DOM elements instead of drawing on canvas
-    const scoreElement = document.getElementById('score')
-    const livesElement = document.getElementById('lives')
+    const elapsed_timeElement = document.getElementById('elapsed_time')
+    const num_deathsElement = document.getElementById('num_deaths')
     const coinsElement = document.getElementById('coins')
 
-    if (scoreElement) scoreElement.textContent = data.score.toString()
-    if (livesElement) livesElement.textContent = data.lives.toString()
+    if (elapsed_timeElement) elapsed_timeElement.textContent = data.elapsed_time.toFixed(2)
+    if (num_deathsElement) num_deathsElement.textContent = data.num_deaths.toString()
     if (coinsElement) coinsElement.textContent = data.coins.toString()
   }
 

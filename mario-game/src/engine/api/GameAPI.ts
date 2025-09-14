@@ -8,7 +8,7 @@ import { LevelBuilder } from '../LevelBuilder'
  */
 export class GameAPI {
   private engine: GameEngine
-  private builder: LevelBuilder
+  public builder: LevelBuilder
   private canvas: HTMLCanvasElement
 
   constructor(canvas: HTMLCanvasElement | string, config?: GameConfig) {
@@ -109,6 +109,15 @@ export class GameAPI {
   setPlayerStart(x: number, y: number): this {
     this.builder.setPlayerStart(x, y)
     this.log(`Player start position set to (${x}, ${y})`)
+    return this
+  }
+
+  /**
+   * Add a goal star at the specified coordinates (victory condition)
+   */
+  addGoal(x: number, y: number): this {
+    this.builder.addGoal(x, y)
+    this.log(`Goal added at (${x}, ${y})`)
     return this
   }
 
@@ -294,12 +303,12 @@ export class GameAPI {
     return this.engine
   }
 
-  /**
-   * Get current player score
-   */
-  getScore(): number {
-    return this.engine.getScore ? this.engine.getScore() : 0
-  }
+  // /**
+  //  * Get current player score
+  //  */
+  // getScore(): number {
+  //   return this.engine.getScore ? this.engine.getScore() : 0
+  // }
 
   /**
    * Get platforms for debugging

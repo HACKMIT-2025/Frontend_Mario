@@ -42,6 +42,12 @@ export class Player extends Entity {
     this.animationController.playAnimation('idle_right')
   }
 
+  public setPos(x: number, y: number) {
+    this.position.x = x
+    this.position.y = y
+    this.velocity = { x: 0, y: 0 }
+  }
+
   public update(dt: number) {
     // Update state based on velocity
     if (this.velocity.y < -0.5) {
@@ -82,7 +88,7 @@ export class Player extends Entity {
     // Update invulnerability
     if (this.invulnerable && this.invulnerableTime > 0) {
       this.invulnerableTime -= dt * 1000
-      if (this.invulnerableTime <= 0) {
+      if (this.invulnerableTime <= 0) { 
         this.invulnerable = false
       }
     }

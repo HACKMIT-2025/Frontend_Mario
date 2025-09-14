@@ -4,6 +4,7 @@ import { EntityManager } from './entities/EntityManager'
 import { InputManager } from './input/InputManager'
 import { Camera } from './render/Camera'
 import { Level } from './level/Level'
+import { type LevelData } from './LevelBuilder'
 import { Player } from './entities/Player'
 import { Platform } from './level/Platform'
 import { Entity } from './entities/Entity'
@@ -14,6 +15,10 @@ export interface GameConfig {
   height?: number
   gravity?: number
   fps?: number
+  goal_x?: number
+  goal_y?: number
+  start_x?: number
+  start_y?: number
 }
 
 export class GameEngine {
@@ -29,15 +34,21 @@ export class GameEngine {
 
   private running = false
   private paused = false
+  private victoryState = false  // Add victory state flag
   private lastTime = 0
   private deltaTime = 0
   private fps = 60
   private frameInterval: number
 
-  private score = 0
-  private lives = 3
+  private elapsed_time = 0
+  private num_deaths = 0
   private coins = 0
   private spriteLoader: SpriteLoader
+  private goal_x
+  private goal_y
+  private start_x
+  private start_y
+  private levelData: LevelData
   private spritesInitialized = false
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
@@ -63,45 +74,13 @@ export class GameEngine {
     this.fps = config.fps || 60
     this.frameInterval = 1000 / this.fps
 
+    this.goal_x = config.goal_x
+    this.goal_y = config.goal_y
+    this.start_x = config.start_x
+    this.start_y = config.start_y
+
     // Setup default demo level
-    this.setupDemoLevel()
-  }
-
-  private setupDemoLevel() {
-    this.currentLevel = new Level()
-
-    const worldWidth = 3000
-    const worldHeight = 600
-
-    // Add invisible boundary walls to prevent wall clipping
-    // Left boundary wall
-    this.currentLevel.addPlatform(-50, -100, 50, worldHeight + 200, 'boundary')
-    // Right boundary wall
-    this.currentLevel.addPlatform(worldWidth, -100, 50, worldHeight + 200, 'boundary')
-    // Top boundary (ceiling)
-    this.currentLevel.addPlatform(-50, -100, worldWidth + 100, 50, 'boundary')
-
-    // Add some platforms
-    this.currentLevel.addPlatform(0, 500, 2000, 76, 'platform')
-    this.currentLevel.addPlatform(300, 400, 100, 20, 'platform')
-    this.currentLevel.addPlatform(500, 350, 150, 20, 'platform')
-    this.currentLevel.addPlatform(750, 300, 100, 20, 'platform')
-
-    // Add coins
-    for (let i = 0; i < 10; i++) {
-      this.currentLevel.addCoin(200 + i * 50, 350)
-    }
-
-    // Add enemies
-    this.currentLevel.addEnemy(400, 450, 'goomba')
-    this.currentLevel.addEnemy(600, 450, 'koopa')
-
-    // Create player
-    this.player = new Player(100, 400)
-    this.entityManager.addEntity(this.player)
-
-    // Load level entities
-    this.loadLevel(this.currentLevel)
+    // this.setupDemoLevel()
   }
 
   public loadLevel(level: Level) {
@@ -117,6 +96,10 @@ export class GameEngine {
     if (this.player) {
       this.entityManager.addEntity(this.player)
     }
+  }
+
+  public setLevelData(data: LevelData) {
+    this.levelData = data
   }
 
   public async initialize() {
@@ -161,16 +144,33 @@ export class GameEngine {
   public reset() {
     this.running = false
     this.paused = false
-    this.score = 0
-    this.lives = 3
+    this.num_deaths = 0
+    this.elapsed_time = 0
     this.coins = 0
     this.entityManager.clear()
-    this.setupDemoLevel()
+    this.currentLevel?.entities.forEach((entity) => {
+      entity.dead = false
+    });
+
+    this.player?.setPos(this.start_x!, this.start_y!)
+    // const coins = this.levelData.coins
+    // coins.forEach((coin) => {
+    //   this.currentLevel?.addCoin(coin.x, coin.y)
+    // });
+    this.loadLevel(this.currentLevel!)
+    this.victoryState = false  // Reset victory state
     this.updateUI()
   }
 
   private gameLoop = () => {
-    if (!this.running) return
+    // Check for restart key in victory state
+    if (this.victoryState && this.inputManager.isKeyPressed('KeyR')) {
+      this.reset()
+      this.start()
+      return
+    }
+
+    // if (!this.running) return
 
     const currentTime = performance.now()
     const elapsed = currentTime - this.lastTime
@@ -179,7 +179,9 @@ export class GameEngine {
       this.deltaTime = elapsed / 1000 // Convert to seconds
 
       if (!this.paused) {
-        this.update(this.deltaTime)
+        if (!this.victoryState) {
+          this.update(this.deltaTime)
+        }
         this.render()
       }
 
@@ -190,9 +192,18 @@ export class GameEngine {
   }
 
   private update(dt: number) {
+
+    // // Don't update game logic if in victory state
+    // if (this.victoryState) {
+    //   return
+    // }
+
     // IMPORTANT: Update entity manager to process pending adds/removes
     this.entityManager.update()
 
+    if (!this.victoryState) {
+      this.elapsed_time += dt
+    }
     // Update input
     const input = this.inputManager.getInput()
 
@@ -233,7 +244,6 @@ export class GameEngine {
 
   private checkCollisions() {
     const entities = this.entityManager.getEntities()
-    const platforms = this.currentLevel?.getPlatforms() || []
     const polygons = this.currentLevel?.getPolygons() || []
 
     // Note: Basic platform collisions are now handled by Swept AABB in updateEntity
@@ -254,24 +264,26 @@ export class GameEngine {
         }
       })
 
-      // Check for victory condition (player reaching goal pipe)
-      platforms.forEach(platform => {
-        if (platform.isGoal) {
-          const overlap = this.checkPlayerPlatformOverlap(this.player!, platform)
-          if (overlap) {
-            console.log('🎉 Victory condition triggered!')
-            this.victory()
-          }
+      // Check for victory condition (player reaching goal coordinates)
+      if (this.goal_x !== undefined && this.goal_y !== undefined) {
+        const playerReachedGoal = this.checkPlayerGoalOverlap(this.player!)
+        if (playerReachedGoal) {
+          console.log('🎉 Victory condition triggered!')
+          this.victory()
         }
-      })
+      }
     }
   }
 
-  private checkPlayerPlatformOverlap(player: Player, platform: Platform): boolean {
-    return player.position.x < platform.x + platform.width &&
-           player.position.x + player.width > platform.x &&
-           player.position.y < platform.y + platform.height &&
-           player.position.y + player.height > platform.y
+  private checkPlayerGoalOverlap(player: Player): boolean {
+    if (this.goal_x === undefined || this.goal_y === undefined) return false
+    
+    // Check if player overlaps with goal coordinates (assuming goal has a 32x32 area)
+    const goalSize = 32 // Default goal area size
+    return player.position.x < this.goal_x + goalSize &&
+           player.position.x + player.width > this.goal_x &&
+           player.position.y < this.goal_y + goalSize &&
+           player.position.y + player.height > this.goal_y
   }
 
   private enforceWorldBoundaries(entity: Entity) {
@@ -331,7 +343,6 @@ export class GameEngine {
     
     if (entity.type === 'coin') {
       this.coins++
-      this.score += 10
       entity.dead = true
     } else if (entity.type === 'enemy') {
       // Special handling for spike enemies - they always damage the player
@@ -342,7 +353,6 @@ export class GameEngine {
       
       if (this.player.velocity.y > 0 && this.player.position.y < entity.position.y) {
         // Player jumping on enemy
-        this.score += 100
         entity.dead = true
         this.player.velocity.y = -10 // Bounce
       } else {
@@ -361,12 +371,8 @@ export class GameEngine {
     if (this.player.size === 'big') {
       this.player.shrink()
     } else {
-      this.lives--
-      if (this.lives <= 0) {
-        this.gameOver()
-      } else {
-        this.respawnPlayer()
-      }
+      this.num_deaths++
+      this.respawnPlayer()
     }
   }
 
@@ -386,59 +392,104 @@ export class GameEngine {
     switch(type) {
       case 'mushroom':
         this.player.grow()
-        this.score += 50
+        // this.score += 50
         break
       case 'star':
         this.player.makeInvulnerable(10000) // 10 seconds
-        this.score += 100
+        // this.score += 100
         break
       case 'flower':
         this.player.enableFireball()
-        this.score += 50
+        // this.score += 50
         break
     }
   }
 
-  private gameOver() {
-    this.running = false
-    console.log('Game Over! Score:', this.score)
-    // TODO: Show game over screen
-  }
+  // private gameOver() {
+  //   this.running = false
+  //   console.log('Game Over! Score:', this.score)
+  //   // TODO: Show game over screen
+  // }
 
   private victory() {
     this.running = false
-    this.score += 1000 // Bonus points for completing level
-    console.log('🎉 Victory! Score:', this.score)
+    this.victoryState = true  // Set victory state instead of stopping everything
+    // this.score += 1000 // Bonus points for completing level
+    console.log('🎉 Victory! Time elapsed: ', this.elapsed_time, ' Number of deaths: ', this.num_deaths, ' Coins: ', this.coins)
 
     // Display victory message on canvas
-    this.ctx.save()
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+    // this.renderer.clear()
+    // this.ctx.save()
+    // this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+    // this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
 
-    this.ctx.fillStyle = '#FFD700'
-    this.ctx.font = 'bold 48px Arial'
-    this.ctx.textAlign = 'center'
-    this.ctx.fillText('🎉 VICTORY! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 50)
+    // this.ctx.fillStyle = '#FFD700'
+    // this.ctx.font = 'bold 48px Arial'
+    // this.ctx.textAlign = 'center'
+    // this.ctx.fillText('🎉 VICTORY! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 50)
 
-    this.ctx.fillStyle = '#FFFFFF'
-    this.ctx.font = '32px Arial'
-    this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20)
+    // this.ctx.fillStyle = '#FFFFFF'
+    // this.ctx.font = '32px Arial'
+    // this.ctx.fillText(`You used ${this.elapsed_time} seconds`, this.canvas.width / 2, this.canvas.height / 2 + 20)
 
-    this.ctx.font = '20px Arial'
-    this.ctx.fillText('Press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 60)
-    this.ctx.restore()
+    // this.ctx.font = '20px Arial'
+    // this.ctx.fillText('Press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 60)
+    // this.ctx.restore()
   }
 
   private render() {
     // Clear canvas
     this.renderer.clear()
 
+    // Calculate score: coins are most important, deaths least, time is exponential penalty
+    // Example formula: score = coins * 1000 - deaths * 100 - Math.floor(1000 * Math.exp(0.01 * elapsed_time))
+    // You can tweak the weights and exponent as needed
+    const formattedTime = this.elapsed_time.toFixed(2)
+    const score = Math.max(
+      0,
+      2000 + this.coins * 1000 - this.num_deaths * 200 - Math.floor(1000 * Math.exp(0.035 * this.elapsed_time))
+    )
+
+    // If in victory state, show victory screen instead of normal rendering
+    if (this.victoryState) {
+      this.ctx.save()
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+
+      this.ctx.fillStyle = '#FFD700'
+      this.ctx.font = 'bold 48px Arial'
+      this.ctx.textAlign = 'center'
+      this.ctx.fillText('🎉 VICTORY! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 80)
+
+      this.ctx.fillStyle = '#FFFFFF'
+      this.ctx.font = '32px Arial'
+      this.ctx.fillText(
+        `Time: ${formattedTime}s | Deaths: ${this.num_deaths} | Coins: ${this.coins}`,
+        this.canvas.width / 2,
+        this.canvas.height / 2 - 20
+      )
+
+      this.ctx.font = '32px Arial'
+      this.ctx.fillStyle = '#00FF00'
+      this.ctx.fillText(
+        `Score: ${score}`,
+        this.canvas.width / 2,
+        this.canvas.height / 2 + 30
+      )
+
+      this.ctx.font = '20px Arial'
+      this.ctx.fillStyle = '#FFFFFF'
+      this.ctx.fillText('Press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 70)
+      this.ctx.restore()
+      return  // Don't render the normal game
+    }
+
     // Ensure entity manager is up to date before rendering
     this.entityManager.update()
 
     // Apply camera transform
     this.ctx.save()
-    this.ctx.translate(-this.camera.x, -this.camera.y)
+    // this.ctx.translate(-this.camera.x, -this.camera.y)
 
     // Render background
     this.renderer.renderBackground()
@@ -464,19 +515,19 @@ export class GameEngine {
 
     // Render UI (not affected by camera)
     this.renderer.renderUI({
-      score: this.score,
-      lives: this.lives,
+      elapsed_time: this.elapsed_time,
+      num_deaths: this.num_deaths,
       coins: this.coins
     })
   }
 
   private updateUI() {
-    const scoreEl = document.getElementById('score')
-    const livesEl = document.getElementById('lives')
+    const elapsed_timeEl = document.getElementById('elapsed_time')
+    const num_deathsEl = document.getElementById('num_deaths')
     const coinsEl = document.getElementById('coins')
 
-    if (scoreEl) scoreEl.textContent = this.score.toString()
-    if (livesEl) livesEl.textContent = this.lives.toString()
+    if (elapsed_timeEl) elapsed_timeEl.textContent = this.elapsed_time.toString()
+    if (num_deathsEl) num_deathsEl.textContent = this.num_deaths.toString()
     if (coinsEl) coinsEl.textContent = this.coins.toString()
   }
 
@@ -488,16 +539,20 @@ export class GameEngine {
     this.player = player
     this.entityManager.addEntity(player)
   }
-  public addScore(points: number) { this.score += points }
+  // public addScore(points: number) { this.score += points }
   public addCoin() { this.coins++ }
-  public addLife() { this.lives++ }
-  public getScore(): number { return this.score }
-  public getLives(): number { return this.lives }
+  // public addLife() { this.lives++ }
+  // public getScore(): number { return this.score }
+  // public getLives(): number { return this.lives }
   public getCoins(): number { return this.coins }
   public getPlatforms(): Platform[] {
     return this.currentLevel ? this.currentLevel.getPlatforms() : []
   }
   public getEntities(): Entity[] {
     return this.entityManager.getEntities()
+  }
+  public setGoal(x: number, y: number) {
+    this.goal_x = x
+    this.goal_y = y
   }
 }

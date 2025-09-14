@@ -12,12 +12,37 @@ app.innerHTML = `
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
     <div id="game-ui">
-      <div class="score">Score: <span id="score">0</span></div>
-      <div class="lives">Lives: <span id="lives">3</span></div>
+      <div class="num_deaths">Deaths: <span id="num_deaths">0</span></div>
+      <div class="elapsed_time">Time: <span id="elapsed_time">0</span></div>
       <div class="coins">Coins: <span id="coins">0</span></div>
     </div>
   </div>
 `
+
+// Add starting point (Mario spawn location) from level_data.json
+const startPoint = levelData.starting_points[0]
+let startX: number | undefined = undefined
+let startY: number | undefined = undefined
+if (startPoint) {
+  const [x, y] = startPoint.coordinates
+  startX = x
+  startY = y
+  console.log(`Original Start Point: (${startX}, ${startY})`)
+} else {
+  startX = 100
+  startY = 400
+  console.log('No starting point found in level_data.json, using default (100, 400)')
+}
+
+// Add end point (goal pipe) from level_data.json
+const endPoint = levelData.end_points[0]
+let scaledEndX: number | undefined = undefined
+let scaledEndY: number | undefined = undefined
+if (endPoint) {
+  const [endX, endY] = endPoint.coordinates
+  scaledEndX = endX
+  scaledEndY = endY - 30
+}
 
 // Initialize game API with error handling
 let gameAPI: GameAPI
@@ -26,12 +51,19 @@ try {
     width: 1024,
     height: 576,
     gravity: 0.5,
-    fps: 60
+    fps: 60,
+    goal_x: endPoint ? scaledEndX : undefined,
+    goal_y: endPoint ? scaledEndY : undefined,
+    start_x: startX,
+    start_y: startY
   })
 } catch (error) {
   console.error('Failed to initialize GameAPI:', error)
   throw new Error('Game initialization failed. Please check the console for details.')
 }
+
+gameAPI.setPlayerStart(startX, startY)
+
 
 // Expose global API for external use (e.g., browser console, image recognition)
 ;(window as any).GameAPI = gameAPI
@@ -130,25 +162,6 @@ gameAPI.clearLevel()
 
 // gameAPI.buildLevel().startGame()
 
-// Add starting point (Mario spawn location) from level_data.json
-const startPoint = levelData.starting_points[0]
-if (startPoint) {
-  const [startX, startY] = startPoint.coordinates
-  console.log(`Original Start Point: (${startX}, ${startY})`)
-  gameAPI.setPlayerStart(startX, startY)
-} else {
-  gameAPI.setPlayerStart(100, 400) // fallback
-}
-
-// Add end point (goal pipe) from level_data.json
-const endPoint = levelData.end_points[0]
-if (endPoint) {
-  const [endX, endY] = endPoint.coordinates
-  const scaledEndX = endX
-  const scaledEndY = endY - 30
-  gameAPI.addGoalPipe(scaledEndX, scaledEndY)
-}
-
 const coins = levelData.coins
 coins.forEach((coin) => {
   const [coinX, coinY] = coin.coordinates
@@ -186,4 +199,7 @@ levelData.rigid_bodies.forEach((rigidBody) => {
   gameAPI.addPolygon(scaledContours, 'polygon')
 })
 // loadCustomLevel(gameAPI.getEngine())
-gameAPI.buildLevel().startGame()
+gameAPI.addGoal(scaledEndX, scaledEndY).buildLevel()
+gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
+
+gameAPI.startGame()

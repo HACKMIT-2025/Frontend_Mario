@@ -8,10 +8,11 @@ import { Entity } from '../entities/Entity'
 export class Level {
   private platforms: Platform[] = []
   private polygons: Polygon[] = []
-  private entities: Entity[] = []
+  public entities: Entity[] = []
   private levelWidth = 3000
   private levelHeight = 600
   private background = 'sky'
+  private goal: { x: number; y: number } | null = null
 
   public addPlatform(x: number, y: number, width: number, height: number, type = 'normal'): Platform {
     const platform = new Platform(x, y, width, height, type)
@@ -76,10 +77,19 @@ export class Level {
     return this.background
   }
 
+  public setGoal(x: number, y: number) {
+    this.goal = { x, y }
+  }
+
+  public getGoal(): { x: number; y: number } | null {
+    return this.goal
+  }
+
   public clear() {
     this.platforms = []
     this.polygons = []
     this.entities = []
+    this.goal = null
   }
 
   public removePlatform(platform: Platform) {

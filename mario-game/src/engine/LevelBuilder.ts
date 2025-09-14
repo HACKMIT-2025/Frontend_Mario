@@ -33,11 +33,15 @@ export interface LevelData {
     x: number
     y: number
   }
+  goal?: {
+    x: number
+    y: number
+  }
 }
 
 export class LevelBuilder {
   private engine: GameEngine
-  private levelData: LevelData = {
+  public levelData: LevelData = {
     platforms: [],
     polygons: [],
     enemies: [],
@@ -90,6 +94,11 @@ export class LevelBuilder {
 
   public setPlayerStart(x: number, y: number): this {
     this.levelData.playerStart = { x, y }
+    return this
+  }
+
+  public addGoal(x: number, y: number): this {
+    this.levelData.goal = { x, y }
     return this
   }
 
@@ -159,6 +168,13 @@ export class LevelBuilder {
     // Set player start position
     const player = new Player(this.levelData.playerStart.x, this.levelData.playerStart.y)
     this.engine.setPlayer(player)
+
+    // Set goal if defined
+    if (this.levelData.goal) {
+      level.setGoal(this.levelData.goal.x, this.levelData.goal.y)
+      // Also set goal coordinates in the engine for victory condition
+      this.engine.setGoal(this.levelData.goal.x, this.levelData.goal.y)
+    }
 
     // Load level into engine
     this.engine.loadLevel(level)
