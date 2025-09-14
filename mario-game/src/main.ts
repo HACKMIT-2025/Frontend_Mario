@@ -62,7 +62,7 @@ try {
   throw new Error('Game initialization failed. Please check the console for details.')
 }
 
-gameAPI.setPlayerStart(startX, startY)
+gameAPI.setPlayerStart(startX!, startY!)
 
 
 // Expose global API for external use (e.g., browser console, image recognition)
@@ -165,13 +165,13 @@ gameAPI.clearLevel()
 // gameAPI.buildLevel().startGame()
 
 const coins = levelData.coins
-coins.forEach((coin) => {
+coins.forEach((coin: any) => {
   const [coinX, coinY] = coin.coordinates
   gameAPI.addCoin(coinX, coinY)
 })
 
 const spikes = levelData.spikes
-spikes.forEach((spike) => {
+spikes.forEach((spike: any) => {
   const [spikeX, spikeY] = spike.coordinates
   gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
 })
@@ -188,9 +188,9 @@ spikes.forEach((spike) => {
 // gameAPI.addSpike(500, 432, 32)
 
 // Add rigid bodies as polygons from level_data.json
-levelData.rigid_bodies.forEach((rigidBody) => {
+levelData.rigid_bodies.forEach((rigidBody: any) => {
   // Scale contour points to fit game world
-  const scaledContours = rigidBody.contour_points.map(point => {
+  const scaledContours = rigidBody.contour_points.map((point: any) => {
     const [x, y] = point
     return [
       x, y
