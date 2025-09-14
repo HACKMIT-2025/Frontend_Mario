@@ -1,6 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
-import { loadCustomLevel } from './customLevel'
+import levelData from '../level_data.json'
 
 // Initialize game container
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -115,24 +115,41 @@ GameAPI.generateFromImageData(imageData)
 
 // Load custom level based on level_data.json
 gameAPI.clearLevel()
-    .setPlayerStart(100, 400)
-    .addPlatform(0, 500, 1024, 76, 'ground'); // Ground platform
 
-// Test 1: Simple triangle
-const triangle = [[0, 500], [100, 0], [50, 50]];
-gameAPI.addPolygon(triangle);
+// Add starting point (Mario spawn location) from level_data.json
+const startPoint = levelData.starting_points[0]
+if (startPoint) {
+  const [startX, startY] = startPoint.coordinates
+  console.log(`Original Start Point: (${startX}, ${startY})`)
+  gameAPI.setPlayerStart(startX, startY)
+} else {
+  gameAPI.setPlayerStart(100, 400) // fallback
+}
 
-// Test 2: Pentagon
-const pentagon = [[50, 0], [100, 30], [80, 80], [20, 80], [0, 30]];
-gameAPI.addPolygon(pentagon);
+// Add end point (goal pipe) from level_data.json
+const endPoint = levelData.end_points[0]
+if (endPoint) {
+  const [endX, endY] = endPoint.coordinates
+  const scaledEndX = endX
+  const scaledEndY = endY
+  gameAPI.addGoalPipe(scaledEndX, scaledEndY)
+}
 
-// Test 3: Hexagon
-const hexagon = [[30, 0], [90, 0], [120, 50], [90, 100], [30, 100], [0, 50]];
-gameAPI.addPolygon(hexagon);
+// Add ground platform for safety
+// gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
 
-// Add some coins for interaction testing
-gameAPI.addCoin(250, 350)
-        .addCoin(450, 300)
-        .addCoin(650, 250);
+// Add rigid bodies as polygons from level_data.json
+levelData.rigid_bodies.forEach((rigidBody) => {
+  // Scale contour points to fit game world
+  const scaledContours = rigidBody.contour_points.map(point => {
+    const [x, y] = point
+    return [
+      x, y
+    ]
+  })
+
+  // Add polygon with scaled coordinates
+  gameAPI.addPolygon(scaledContours, 'polygon')
+})
 // loadCustomLevel(gameAPI.getEngine())
 gameAPI.buildLevel().startGame()
