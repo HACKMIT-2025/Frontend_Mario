@@ -95,26 +95,78 @@ export class Renderer {
   }
 
   private renderPolygon(polygon: any) {
+    if (!polygon || !polygon.contours || polygon.contours.length < 3) {
+      console.warn('Invalid polygon for rendering:', polygon)
+      return
+    }
+
     this.ctx.save()
 
-    // Set polygon style
-    this.ctx.fillStyle = '#666666' // Gray for now, can be customized
-    this.ctx.strokeStyle = '#444444'
-    this.ctx.lineWidth = 2
+    // Set polygon style based on type
+    switch (polygon.type) {
+      case 'triangle':
+        this.ctx.fillStyle = '#8B4513' // Brown
+        this.ctx.strokeStyle = '#654321'
+        break
+      case 'pentagon':
+        this.ctx.fillStyle = '#2F4F4F' // Dark slate gray
+        this.ctx.strokeStyle = '#1C3030'
+        break
+      case 'hexagon':
+        this.ctx.fillStyle = '#483D8B' // Dark slate blue
+        this.ctx.strokeStyle = '#2F2F5F'
+        break
+      default:
+        this.ctx.fillStyle = '#666666' // Default gray
+        this.ctx.strokeStyle = '#444444'
+    }
+    
+    this.ctx.lineWidth = 3
 
     // Draw polygon
     this.ctx.beginPath()
     const contours = polygon.contours
-    if (contours.length > 0) {
-      this.ctx.moveTo(contours[0][0], contours[0][1])
-      for (let i = 1; i < contours.length; i++) {
-        this.ctx.lineTo(contours[i][0], contours[i][1])
-      }
-      this.ctx.closePath()
+    
+    // Validate all points before drawing
+    const validContours = contours.filter((point: any) => 
+      Array.isArray(point) && 
+      point.length >= 2 && 
+      isFinite(point[0]) && 
+      isFinite(point[1])
+    )
+    
+    if (validContours.length < 3) {
+      console.warn(`Polygon has insufficient valid points: ${validContours.length}`)
+      this.ctx.restore()
+      return
     }
+
+    this.ctx.moveTo(validContours[0][0], validContours[0][1])
+    for (let i = 1; i < validContours.length; i++) {
+      this.ctx.lineTo(validContours[i][0], validContours[i][1])
+    }
+    this.ctx.closePath()
 
     this.ctx.fill()
     this.ctx.stroke()
+
+    // Add debug info if debug mode is enabled
+    if (this.debugMode.enabled) {
+      this.ctx.fillStyle = '#FFFFFF'
+      this.ctx.font = '12px Arial'
+      this.ctx.textAlign = 'center'
+      const bounds = polygon.getBounds()
+      const centerX = (bounds.left + bounds.right) / 2
+      const centerY = (bounds.top + bounds.bottom) / 2
+      this.ctx.fillText(polygon.type || 'polygon', centerX, centerY)
+      
+      // Draw vertex numbers
+      this.ctx.fillStyle = '#FFFF00'
+      this.ctx.font = '10px Arial'
+      validContours.forEach((point: any, index: number) => {
+        this.ctx.fillText(index.toString(), point[0], point[1] - 5)
+      })
+    }
 
     this.ctx.restore()
   }
@@ -127,16 +179,16 @@ export class Renderer {
       case 'brick':
         let brickSuccess = true
         // Try to use brick sprite
-        for (let x = 0; x < platform.width; x += 32) {
-          for (let y = 0; y < platform.height; y += 32) {
+        for (let x = 0; x < platform.width; x += 256) {
+          for (let y = 0; y < platform.height; y += 256) {
             const drawn = this.spriteLoader.drawSprite(
               this.ctx,
               'brick',
               0,
               platform.x + x,
               platform.y + y,
-              Math.min(32, platform.width - x),
-              Math.min(32, platform.height - y)
+              // Math.min(32, platform.width - x),
+              // Math.min(32, platform.height - y)
             )
             if (!drawn) brickSuccess = false
           }
@@ -144,6 +196,7 @@ export class Renderer {
 
         // Fallback if sprite failed
         if (!brickSuccess) {
+          console.log('Failed to draw brick sprite, using fallback rendering')
           this.ctx.fillStyle = '#8B4513'
           this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
           // Draw brick pattern
@@ -282,57 +335,48 @@ export class Renderer {
 
       case 'ground':
       case 'platform':
-        let grassDrawn = true
-        let terrainDrawn = true
+        // These types are now handled by individual grass_block and terrain_block pieces
+        // created in LevelBuilder, so we use fallback rendering here
+        this.ctx.fillStyle = '#8B4513' // Brown
+        this.ctx.fillRect(platform.x, platform.y + 10, platform.width, platform.height - 10)
+        this.ctx.fillStyle = '#228B22' // Green grass
+        this.ctx.fillRect(platform.x, platform.y, platform.width, 10)
+        break
 
-        // Try to use grass sprite for top layer
-        for (let x = 0; x < platform.width; x += 32) {
-          const drawn = this.spriteLoader.drawSprite(
-            this.ctx,
-            'grass',
-            0,
-            platform.x + x,
-            platform.y,
-            Math.min(32, platform.width - x),
-            32
-          )
-          if (!drawn) grassDrawn = false
-        }
-
-        // Try to use terrain sprite for ground base
-        for (let x = 0; x < platform.width; x += 32) {
-          for (let y = 10; y < platform.height; y += 32) {
-            const drawn = this.spriteLoader.drawSprite(
-              this.ctx,
-              'terrain',
-              0,
-              platform.x + x,
-              platform.y + y,
-              Math.min(32, platform.width - x),
-              Math.min(32, platform.height - y)
-            )
-            if (!drawn) terrainDrawn = false
-          }
-        }
-
-        // Fallback to original rendering if sprites failed
-        if (!grassDrawn || !terrainDrawn) {
-          this.ctx.fillStyle = '#8B4513' // Brown
-          this.ctx.fillRect(platform.x, platform.y + 10, platform.width, platform.height - 10)
+      case 'grass_block':
+        const grassDrawn = this.spriteLoader.drawSprite(
+          this.ctx,
+          'grass',
+          0,
+          platform.x,
+          platform.y,
+          platform.width,
+          platform.height
+        )
+        
+        if (!grassDrawn) {
+          // Fallback rendering
           this.ctx.fillStyle = '#228B22' // Green grass
-          this.ctx.fillRect(platform.x, platform.y, platform.width, 10)
-          // Add grass details
-          this.ctx.strokeStyle = '#2E7D32'
-          for (let i = 0; i < platform.width; i += 10) {
-            this.ctx.beginPath()
-            this.ctx.moveTo(platform.x + i, platform.y + 10)
-            this.ctx.lineTo(platform.x + i + 2, platform.y)
-            this.ctx.lineTo(platform.x + i + 4, platform.y + 10)
-            this.ctx.stroke()
-          }
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
         }
+        break
 
-        this.debugMode.logPlatformRender(platform.type, grassDrawn && terrainDrawn)
+      case 'terrain_block':
+        const terrainDrawn = this.spriteLoader.drawSprite(
+          this.ctx,
+          'terrain',
+          0,
+          platform.x,
+          platform.y,
+          platform.width,
+          platform.height
+        )
+        
+        if (!terrainDrawn) {
+          // Fallback rendering
+          this.ctx.fillStyle = '#8B4513' // Brown
+          this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+        }
         break
 
       case 'underground':
