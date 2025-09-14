@@ -121,16 +121,22 @@
         border: 1px solid rgba(255,255,255,0.2);
       }
 
-      .ui-item {
-        margin-right: 20px;
+      #game-ui div {
+        margin-bottom: 8px;
+      }
+
+      #game-ui div:last-child {
+        margin-bottom: 0;
+      }
+
+      .num_deaths, .elapsed_time, .coins {
+        background: rgba(0,0,0,0.3);
+        padding: 2px 8px;
+        border-radius: 4px;
         display: inline-block;
       }
 
-      .ui-item:last-child {
-        margin-right: 0;
-      }
-
-      /* Loading状态 */
+      /* Loading Status */
       #loading {
         position: absolute;
         top: 50%;
@@ -160,32 +166,32 @@
   </head>
   <body>
     <div id="app">
-      <!-- 顶部导航 -->
+      <!-- Top Navigation -->
       <header class="header">
         <h1>🍄 Mario Game</h1>
         <div class="header-actions">
-          <button class="btn secondary" onclick="shareGame()">📤 分享游戏</button>
-          <button class="btn" onclick="restartGame()">🔄 重新开始</button>
-          <button class="btn danger" onclick="goHome()">🏠 返回首页</button>
+          <button class="btn secondary" onclick="shareGame()">📤 Share Game</button>
+          <button class="btn" onclick="restartGame()">🔄 Restart</button>
+          <button class="btn danger" onclick="goHome()">🏠 Home</button>
         </div>
       </header>
 
-      <!-- 游戏区域 -->
+      <!-- Game Area -->
       <main class="game-section">
         <div id="game-container">
           <canvas id="game-canvas"></canvas>
 
-          <!-- 游戏UI -->
+          <!-- Game UI -->
           <div id="game-ui">
-            <span class="ui-item">🏆 分数: <span id="score">0</span></span>
-            <span class="ui-item">❤️ 生命: <span id="lives">3</span></span>
-            <span class="ui-item">🪙 金币: <span id="coins">0</span></span>
+            <div class="num_deaths">Deaths: <span id="num_deaths">0</span></div>
+            <div class="elapsed_time">Time: <span id="elapsed_time">0</span></div>
+            <div class="coins">Coins: <span id="coins">0</span></div>
           </div>
 
-          <!-- Loading状态 -->
+          <!-- Loading Status -->
           <div id="loading">
             <div class="spinner"></div>
-            <div>正在加载游戏...</div>
+            <div>Loading game...</div>
           </div>
 
         </div>
@@ -205,14 +211,14 @@
       function shareGame() {
         const url = window.location.href
         navigator.clipboard.writeText(url).then(() => {
-          alert('游戏链接已复制到剪贴板！')
+          alert('Game link copied to clipboard!')
         }).catch(() => {
-          prompt('请手动复制游戏链接:', url)
+          prompt('Please copy the game link manually:', url)
         })
       }
 
       function goHome() {
-        if (confirm('确定要离开当前游戏吗？')) {
+        if (confirm('Are you sure you want to leave the current game?')) {
           window.location.href = '/'
         }
       }

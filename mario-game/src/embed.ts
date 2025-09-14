@@ -27,19 +27,6 @@ async function initializeEmbedGame() {
       throw new Error('Game canvas not found')
     }
 
-    // 创建游戏API实例
-    gameAPI = new GameAPI('game-canvas', {
-      width: 1024,
-      height: 576,
-      gravity: 0.5,
-      fps: 60
-    })
-
-    // 暴露给全局（用于调试）
-    window.gameAPI = gameAPI
-
-    console.log('✅ Game API initialized')
-
     // 设置API URL（如果父窗口提供）
     if (window.MARIO_API_URL) {
       LevelLoader.setApiBaseUrl(window.MARIO_API_URL)
@@ -48,6 +35,41 @@ async function initializeEmbedGame() {
     // 加载关卡数据
     console.log('📋 Loading level data...')
     const levelData = await LevelLoader.loadLevelData(window.MARIO_API_URL)
+
+    // 提取起始点和终点用于引擎配置
+    let startX = 100, startY = 400
+    let goalX: number | undefined, goalY: number | undefined
+
+    if (levelData.starting_points && levelData.starting_points.length > 0) {
+      const startPoint = levelData.starting_points[0]
+      startX = startPoint.coordinates[0]
+      startY = startPoint.coordinates[1]
+    }
+
+    if (levelData.end_points && levelData.end_points.length > 0) {
+      const endPoint = levelData.end_points[0]
+      goalX = endPoint.coordinates[0]
+      goalY = endPoint.coordinates[1] - 30
+    }
+
+    // 创建游戏API实例，包含目标配置
+    gameAPI = new GameAPI('game-canvas', {
+      width: 1024,
+      height: 576,
+      gravity: 0.5,
+      fps: 60,
+      goal_x: goalX,
+      goal_y: goalY,
+      start_x: startX,
+      start_y: startY
+    })
+
+    // 暴露给全局（用于调试）
+    window.gameAPI = gameAPI
+    ;(window as any).GameAPI = gameAPI // 与本地引擎保持一致
+    ;(window as any).MarioGameAPI = gameAPI // 别名兼容
+
+    console.log('✅ Game API initialized')
 
     // 构建关卡
     await buildGameFromLevelData(levelData)
@@ -87,11 +109,11 @@ async function buildGameFromLevelData(levelData: LevelData) {
     gameAPI.setPlayerStart(100, 400) // 默认位置
   }
 
-  // 添加终点（目标管道）
+  // 添加终点（使用 addGoal 而不是 addGoalPipe，与本地引擎保持一致）
   if (levelData.end_points && levelData.end_points.length > 0) {
     const endPoint = levelData.end_points[0]
-    gameAPI.addGoalPipe(endPoint.coordinates[0], endPoint.coordinates[1])
-    console.log(`🏁 Goal pipe added at: (${endPoint.coordinates[0]}, ${endPoint.coordinates[1]})`)
+    gameAPI.addGoal(endPoint.coordinates[0], endPoint.coordinates[1] - 30)
+    console.log(`🏁 Goal added at: (${endPoint.coordinates[0]}, ${endPoint.coordinates[1] - 30})`)
   }
 
   // 添加刚体（墙壁和平台）
@@ -130,11 +152,28 @@ async function buildGameFromLevelData(levelData: LevelData) {
     })
   }
 
+  // 添加钉刺（新功能，来自本地引擎）
+  let spikeCount = 0
+  if ((levelData as any).spikes && (levelData as any).spikes.length > 0) {
+    (levelData as any).spikes.forEach((spike: any, index: number) => {
+      try {
+        const [spikeX, spikeY] = spike.coordinates
+        gameAPI.addSpike(spikeX, spikeY, 32) // 标准 32x32 钉刺
+        spikeCount++
+        console.log(`🔺 Added spike at: (${spikeX}, ${spikeY})`)
+      } catch (error) {
+        console.warn(`⚠️ Failed to add spike ${index}:`, error)
+      }
+    })
+  }
+
   // 添加敌人（如果有）
+  let enemyCount = 0
   if (levelData.enemies && levelData.enemies.length > 0) {
     levelData.enemies.forEach((enemy, index) => {
       try {
         gameAPI.addEnemy(enemy.x, enemy.y, enemy.type)
+        enemyCount++
         console.log(`👾 Added ${enemy.type} at: (${enemy.x}, ${enemy.y})`)
       } catch (error) {
         console.warn(`⚠️ Failed to add enemy ${index}:`, error)
@@ -144,7 +183,11 @@ async function buildGameFromLevelData(levelData: LevelData) {
 
   // 构建关卡
   await gameAPI.buildLevel()
-  console.log('✅ Level built successfully')
+
+  // 设置关卡数据到引擎（重要：来自本地引擎的改进）
+  gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
+
+  console.log(`✅ Level built: spikes=${spikeCount}, enemies=${enemyCount}`)
 }
 
 // 监听父窗口消息
