@@ -1,6 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
-import { loadCustomLevel } from './customLevel'
+import { LevelLoader, type LevelData } from './levelLoader'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
@@ -47,23 +47,25 @@ const spriteLoader = SpriteLoader.getInstance()
 ;(window as any).debugMode = () => debugMode.toggle()
 ;(window as any).showPlatforms = () => {
   console.log('🏗️ Platform Debug Info:')
-  if (gameAPI.engine.currentLevel) {
-    const platforms = gameAPI.engine.currentLevel.getPlatforms()
+  const platforms = gameAPI.getPlatforms()
+  if (platforms.length > 0) {
     platforms.forEach((platform: any, index: number) => {
       console.log(`Platform ${index}: type=${platform.type}, pos=(${platform.x},${platform.y}), size=${platform.width}x${platform.height}`)
     })
   } else {
-    console.log('No level loaded')
+    console.log('No platforms loaded')
   }
 }
 
 ;(window as any).showCollisions = () => {
   console.log('💥 Collision Debug Info:')
-  if (gameAPI.engine.entityManager) {
-    const entities = gameAPI.engine.entityManager.getEntities()
+  const entities = gameAPI.getEntities()
+  if (entities.length > 0) {
     entities.forEach((entity: any) => {
       console.log(`${entity.type}: pos=(${Math.round(entity.position.x)},${Math.round(entity.position.y)}), vel=(${Math.round(entity.velocity?.x || 0)},${Math.round(entity.velocity?.y || 0)})`)
     })
+  } else {
+    console.log('No entities loaded')
   }
 }
 
@@ -123,59 +125,96 @@ GameAPI.importJSON(json)
 GameAPI.generateFromImageData(imageData)
 `)
 
-// Load custom level based on level_data.json
-gameAPI.clearLevel()
-    .setPlayerStart(100, 400)
-    .addPlatform(0, 500, 1024, 76, 'ground'); // Ground platform
+// 初始化游戏
+async function initializeGame() {
+  try {
+    console.log('🎮 Initializing main game...')
 
-// Test polygons with validation
-function addSafePolygon(points: number[][], name: string) {
-  if (!points || points.length < 3) {
-    console.warn(`Skipping invalid polygon ${name}: needs at least 3 points`)
-    return
+    // 检查是否有API URL参数
+    const urlParams = new URLSearchParams(window.location.search)
+    const apiUrl = urlParams.get('api') || urlParams.get('apiUrl')
+
+    if (apiUrl) {
+      console.log(`🔧 Using API URL: ${apiUrl}`)
+      LevelLoader.setApiBaseUrl(apiUrl)
+    }
+
+    // 加载关卡数据
+    const levelData = await LevelLoader.loadLevelData(apiUrl || undefined)
+
+    // 构建游戏
+    await buildGameFromLevelData(levelData)
+
+    console.log('✅ Main game initialized successfully')
+
+  } catch (error) {
+    console.error('❌ Failed to initialize main game:', error)
+    alert('游戏初始化失败: ' + (error instanceof Error ? error.message : '未知错误'))
   }
-  
-  // Validate each point
-  const validPoints = points.filter(point => {
-    if (!Array.isArray(point) || point.length !== 2) return false
-    if (typeof point[0] !== 'number' || typeof point[1] !== 'number') return false
-    if (!isFinite(point[0]) || !isFinite(point[1])) return false
-    return true
-  })
-  
-  if (validPoints.length < 3) {
-    console.warn(`Skipping polygon ${name}: insufficient valid points`)
-    return
-  }
-  
-  gameAPI.addPolygon(validPoints)
-  console.log(`Added ${name} with ${validPoints.length} points`)
 }
 
-// Test 1: Simple triangle
-const triangle = [[0, 500], [100, 400], [50, 450]]
-addSafePolygon(triangle, 'triangle')
+// 从关卡数据构建游戏
+async function buildGameFromLevelData(levelData: LevelData) {
+  console.log('🏗️ Building game from level data...', levelData)
 
-// Test 2: Pentagon  
-const pentagon = [[200, 450], [250, 420], [230, 480], [170, 480], [150, 430]]
-addSafePolygon(pentagon, 'pentagon')
+  // 清空现有关卡
+  gameAPI.clearLevel()
 
-// Test 3: Hexagon
-const hexagon = [[300, 420], [360, 420], [390, 450], [360, 480], [300, 480], [270, 450]]
-addSafePolygon(hexagon, 'hexagon')
+  // 设置玩家起始位置
+  if (levelData.starting_points && levelData.starting_points.length > 0) {
+    const startPoint = levelData.starting_points[0]
+    gameAPI.setPlayerStart(startPoint.coordinates[0], startPoint.coordinates[1])
+    console.log(`👨 Player start: (${startPoint.coordinates[0]}, ${startPoint.coordinates[1]})`)
+  } else {
+    gameAPI.setPlayerStart(100, 400)
+  }
 
-// Add some coins for interaction testing
-try {
-  gameAPI.addCoin(250, 350)
-          .addCoin(450, 300)
-          .addCoin(650, 250)
-  
-  // Build and start the game with error handling
-  gameAPI.buildLevel().startGame().catch(error => {
-    console.error('Failed to start game:', error)
-    alert('Game failed to start. Please check the console for details.')
-  })
-} catch (error) {
-  console.error('Failed to build level:', error)
-  alert('Level building failed. Please check the console for details.')
+  // 添加终点
+  if (levelData.end_points && levelData.end_points.length > 0) {
+    const endPoint = levelData.end_points[0]
+    gameAPI.addGoalPipe(endPoint.coordinates[0], endPoint.coordinates[1])
+    console.log(`🏁 Goal pipe: (${endPoint.coordinates[0]}, ${endPoint.coordinates[1]})`)
+  }
+
+  // 添加刚体（平台和墙壁）
+  if (levelData.rigid_bodies && levelData.rigid_bodies.length > 0) {
+    levelData.rigid_bodies.forEach((body, index) => {
+      if (body.contour_points && body.contour_points.length >= 3) {
+        try {
+          let polygonType = 'polygon'
+          if (body.contour_points.length === 3) polygonType = 'triangle'
+          else if (body.contour_points.length === 5) polygonType = 'pentagon'
+          else if (body.contour_points.length === 6) polygonType = 'hexagon'
+
+          gameAPI.addPolygon(body.contour_points, polygonType)
+          console.log(`🔷 Added ${polygonType} (${body.contour_points.length} points)`)
+        } catch (error) {
+          console.warn(`⚠️ Failed to add polygon ${index}:`, error)
+        }
+      }
+    })
+  }
+
+  // 添加金币
+  if (levelData.coins && levelData.coins.length > 0) {
+    levelData.coins.forEach((coin) => {
+      gameAPI.addCoin(coin.x, coin.y)
+    })
+    console.log(`🪙 Added ${levelData.coins.length} coins`)
+  }
+
+  // 添加敌人
+  if (levelData.enemies && levelData.enemies.length > 0) {
+    levelData.enemies.forEach((enemy) => {
+      gameAPI.addEnemy(enemy.x, enemy.y, enemy.type)
+    })
+    console.log(`👾 Added ${levelData.enemies.length} enemies`)
+  }
+
+  // 构建并启动游戏
+  await gameAPI.buildLevel()
+  await gameAPI.startGame()
 }
+
+// 启动游戏初始化
+initializeGame()

@@ -282,6 +282,27 @@ export class GameAPI {
   }
 
   /**
+   * Get current player score
+   */
+  getScore(): number {
+    return this.engine.getScore ? this.engine.getScore() : 0
+  }
+
+  /**
+   * Get platforms for debugging
+   */
+  getPlatforms(): any[] {
+    return this.engine.getPlatforms ? this.engine.getPlatforms() : []
+  }
+
+  /**
+   * Get entities for debugging
+   */
+  getEntities(): any[] {
+    return this.engine.getEntities ? this.engine.getEntities() : []
+  }
+
+  /**
    * Get the level builder instance
    */
   getBuilder(): LevelBuilder {
