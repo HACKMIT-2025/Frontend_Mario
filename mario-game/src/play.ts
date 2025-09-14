@@ -17,24 +17,11 @@ async function initializePlayGame() {
   try {
     console.log('🔧 Initializing play game...')
 
-    // 检查必要的DOM元素
+    // Check required DOM elements
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement
     if (!canvas) {
       throw new Error('Game canvas not found')
     }
-
-    // 创建游戏API实例
-    gameAPI = new GameAPI('game-canvas', {
-      width: 1024,
-      height: 576,
-      gravity: 0.5,
-      fps: 60
-    })
-
-    // 暴露给全局（用于调试和UI控制）
-    ;(window as any).gameAPI = gameAPI
-
-    console.log('✅ Game API initialized')
 
     // 从URL参数获取API URL（如果有）
     const urlParams = new URLSearchParams(window.location.search)
@@ -48,6 +35,41 @@ async function initializePlayGame() {
     // 加载关卡数据
     console.log('📋 Loading level data...')
     const levelData = await LevelLoader.loadLevelData(apiUrl || undefined)
+
+    // 提取起始点和终点用于引擎配置
+    let startX = 100, startY = 400
+    let goalX: number | undefined, goalY: number | undefined
+
+    if (levelData.starting_points && levelData.starting_points.length > 0) {
+      const startPoint = levelData.starting_points[0]
+      startX = startPoint.coordinates[0]
+      startY = startPoint.coordinates[1]
+    }
+
+    if (levelData.end_points && levelData.end_points.length > 0) {
+      const endPoint = levelData.end_points[0]
+      goalX = endPoint.coordinates[0]
+      goalY = endPoint.coordinates[1] - 30
+    }
+
+    // 创建游戏API实例，包含目标配置
+    gameAPI = new GameAPI('game-canvas', {
+      width: 1024,
+      height: 576,
+      gravity: 0.5,
+      fps: 60,
+      goal_x: goalX,
+      goal_y: goalY,
+      start_x: startX,
+      start_y: startY
+    })
+
+    // 暴露给全局（用于调试和UI控制）
+    ;(window as any).gameAPI = gameAPI
+    ;(window as any).GameAPI = gameAPI // 与本地引擎保持一致
+    ;(window as any).MarioGameAPI = gameAPI // 别名兼容
+
+    console.log('✅ Game API initialized')
 
     // 构建关卡
     await buildGameFromLevelData(levelData)
@@ -72,20 +94,20 @@ async function buildGameFromLevelData(levelData: LevelData) {
   // 清空现有关卡
   gameAPI.clearLevel()
 
-  // 设置玩家起始位置
+  // 设置玩家起始位置（已在引擎初始化中设置，这里再次确认）
   if (levelData.starting_points && levelData.starting_points.length > 0) {
     const startPoint = levelData.starting_points[0]
     gameAPI.setPlayerStart(startPoint.coordinates[0], startPoint.coordinates[1])
     console.log(`👨 Player start set to: (${startPoint.coordinates[0]}, ${startPoint.coordinates[1]})`)
   } else {
-    gameAPI.setPlayerStart(100, 400) // 默认位置
+    gameAPI.setPlayerStart(100, 400) // Default position
   }
 
-  // 添加终点（目标管道）
+  // 添加终点（使用 addGoal 而不是 addGoalPipe，与本地引擎保持一致）
   if (levelData.end_points && levelData.end_points.length > 0) {
     const endPoint = levelData.end_points[0]
-    gameAPI.addGoalPipe(endPoint.coordinates[0], endPoint.coordinates[1])
-    console.log(`🏁 Goal pipe added at: (${endPoint.coordinates[0]}, ${endPoint.coordinates[1]})`)
+    gameAPI.addGoal(endPoint.coordinates[0], endPoint.coordinates[1] - 30)
+    console.log(`🏁 Goal added at: (${endPoint.coordinates[0]}, ${endPoint.coordinates[1] - 30})`)
   }
 
   // 添加刚体（墙壁和平台）
@@ -128,6 +150,21 @@ async function buildGameFromLevelData(levelData: LevelData) {
     })
   }
 
+  // 添加钉刺（新功能，来自本地引擎）
+  let spikeCount = 0
+  if ((levelData as any).spikes && (levelData as any).spikes.length > 0) {
+    (levelData as any).spikes.forEach((spike: any, index: number) => {
+      try {
+        const [spikeX, spikeY] = spike.coordinates
+        gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
+        spikeCount++
+        console.log(`🔺 Added spike at: (${spikeX}, ${spikeY})`)
+      } catch (error) {
+        console.warn(`⚠️ Failed to add spike ${index}:`, error)
+      }
+    })
+  }
+
   // 添加敌人（如果有）
   let enemyCount = 0
   if (levelData.enemies && levelData.enemies.length > 0) {
@@ -144,7 +181,11 @@ async function buildGameFromLevelData(levelData: LevelData) {
 
   // 构建关卡
   await gameAPI.buildLevel()
-  console.log(`✅ Level built: ${polygonCount} platforms, ${coinCount} coins, ${enemyCount} enemies`)
+
+  // 设置关卡数据到引擎（重要：来自本地引擎的改进）
+  gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
+
+  console.log(`✅ Level built: ${polygonCount} platforms, ${coinCount} coins, ${spikeCount} spikes, ${enemyCount} enemies`)
 }
 
 
@@ -161,7 +202,7 @@ document.addEventListener('keydown', (event) => {
     case 'KeyR':
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault()
-        if (confirm('确定要重启游戏吗？')) {
+        if (confirm('Are you sure you want to restart the game?')) {
           location.reload()
         }
       }
@@ -173,7 +214,7 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('gameWin', (event: any) => {
   console.log('🎉 Game won!', event.detail)
   setTimeout(() => {
-    if (confirm('恭喜通关！是否重新开始？')) {
+    if (confirm('Congratulations! Restart the game?')) {
       if (gameAPI) gameAPI.resetGame()
     }
   }, 1000)
@@ -182,7 +223,7 @@ window.addEventListener('gameWin', (event: any) => {
 window.addEventListener('gameOver', (event: any) => {
   console.log('💀 Game over!', event.detail)
   setTimeout(() => {
-    if (confirm('游戏结束！是否重新开始？')) {
+    if (confirm('Game over! Restart the game?')) {
       if (gameAPI) gameAPI.resetGame()
     }
   }, 1000)
