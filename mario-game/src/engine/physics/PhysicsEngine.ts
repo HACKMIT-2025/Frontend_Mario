@@ -24,7 +24,7 @@ export class PhysicsEngine {
     this.gravity = gravity
   }
 
-  public updateEntity(entity: Entity, _dt: number, platforms: Platform[] = []) {
+  public updateEntity(entity: Entity, _dt: number, platforms: Platform[] = [], polygons: Polygon[] = []) {
     if (!entity.physics) return
 
     const vel = entity.velocity
@@ -90,7 +90,7 @@ export class PhysicsEngine {
       pos.x += sweptResult.normal.x * 0.1
       pos.y += sweptResult.normal.y * 0.1
     } else {
-      // No collision - apply full movement
+      // No platform collision - apply full movement
       pos.x += movement.x
       pos.y += movement.y
 
@@ -99,6 +99,17 @@ export class PhysicsEngine {
       entity.wallCollision.left = false
       entity.wallCollision.right = false
       entity.ceilingCollision = false
+    }
+
+    // Additional polygon collision check for complex shapes
+    // This handles cases where swept AABB doesn't catch polygon collisions
+    if (polygons.length > 0) {
+      const entityBox = this.getAABB(entity)
+      for (const polygon of polygons) {
+        if (this.polygonIntersectsAABB(polygon, entityBox)) {
+          this.resolvePolygonCollision(entity, polygon, entityBox)
+        }
+      }
     }
   }
 
@@ -430,23 +441,74 @@ export class PhysicsEngine {
   }
 
   private resolvePolygonCollision(entity: Entity, polygon: Polygon, entityBox: AABB) {
-    // Find the closest polygon edge to push the entity away from
+    // Find the collision segment considering entity's velocity direction
     const segments = polygon.getSegments()
     let minDistance = Infinity
     let closestEdge = null
     let pushDirection = { x: 0, y: 0 }
 
-    for (const segment of segments) {
-      const closestPoint = this.closestPointOnSegment(
-        entityBox.x + entityBox.width / 2,
-        entityBox.y + entityBox.height / 2,
-        segment
-      )
+    // First, try to find segments that the entity is actually moving towards
+    const entityCenter = {
+      x: entityBox.x + entityBox.width / 2,
+      y: entityBox.y + entityBox.height / 2
+    }
 
-      const dx = (entityBox.x + entityBox.width / 2) - closestPoint.x
-      const dy = (entityBox.y + entityBox.height / 2) - closestPoint.y
+    let collisionSegment = null
+    let collisionDistance = Infinity
+    let collisionNormal = { x: 0, y: 0 }
+
+    for (const segment of segments) {
+      const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
+      const dx = entityCenter.x - closestPoint.x
+      const dy = entityCenter.y - closestPoint.y
       const distance = Math.sqrt(dx * dx + dy * dy)
 
+      // Determine segment orientation
+      const segmentDx = segment.x2 - segment.x1
+      const segmentDy = segment.y2 - segment.y1
+      const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
+
+      if (segmentLength < 0.001) continue // Skip degenerate segments
+
+      // Normalized segment direction
+      const segmentDir = { x: segmentDx / segmentLength, y: segmentDy / segmentLength }
+
+      // Check if entity's velocity is pointing towards this segment
+      const velocityMagnitude = Math.sqrt(entity.velocity.x * entity.velocity.x + entity.velocity.y * entity.velocity.y)
+      if (velocityMagnitude > 0.1) {
+        const velocityDir = { x: entity.velocity.x / velocityMagnitude, y: entity.velocity.y / velocityMagnitude }
+
+        // Calculate if entity is moving towards the segment
+        const towardsSegment = -(dx * velocityDir.x + dy * velocityDir.y) > 0
+
+        if (towardsSegment && distance < collisionDistance) {
+          // For vertical segments (mainly vertical walls), enhance collision detection
+          const isVerticalSegment = Math.abs(segmentDir.x) < 0.3 && Math.abs(segmentDir.y) > 0.7
+          const hasHorizontalVelocity = Math.abs(entity.velocity.x) > Math.abs(entity.velocity.y) * 0.5
+
+          if (isVerticalSegment && hasHorizontalVelocity) {
+            // Enhanced collision detection for vertical segments with horizontal player movement
+            collisionSegment = segment
+            collisionDistance = distance
+
+            // Calculate proper collision normal for vertical wall
+            if (entity.velocity.x > 0) {
+              // Moving right, hit left side of wall
+              collisionNormal = { x: -1, y: 0 }
+            } else {
+              // Moving left, hit right side of wall
+              collisionNormal = { x: 1, y: 0 }
+            }
+          } else {
+            // Use standard collision detection for other segments
+            collisionSegment = segment
+            collisionDistance = distance
+            collisionNormal = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: 0, y: -1 }
+          }
+        }
+      }
+
+      // Fallback to closest segment if no velocity-based collision found
       if (distance < minDistance) {
         minDistance = distance
         closestEdge = segment
@@ -456,22 +518,62 @@ export class PhysicsEngine {
       }
     }
 
-    if (closestEdge && minDistance < Math.max(entityBox.width, entityBox.height) / 2) {
-      // Push entity away from polygon
-      const pushDistance = 1
-      entity.position.x += pushDirection.x * pushDistance
-      entity.position.y += pushDirection.y * pushDistance
+    // Use collision segment if found, otherwise use closest segment
+    const activeSegment = collisionSegment || closestEdge
+    const activeDistance = collisionSegment ? collisionDistance : minDistance
+    const activeNormal = collisionSegment ? collisionNormal : pushDirection
 
-      // Stop velocity in the direction of collision
-      const dotProduct = entity.velocity.x * pushDirection.x + entity.velocity.y * pushDirection.y
-      if (dotProduct < 0) {
-        entity.velocity.x -= dotProduct * pushDirection.x
-        entity.velocity.y -= dotProduct * pushDirection.y
-      }
+    if (activeSegment && activeDistance < Math.max(entityBox.width, entityBox.height) / 2) {
+      // Determine segment characteristics for appropriate response
+      const segmentDx = activeSegment.x2 - activeSegment.x1
+      const segmentDy = activeSegment.y2 - activeSegment.y1
+      const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
 
-      // Check if entity is landing on top of polygon
-      if (Math.abs(pushDirection.y) > 0.7 && pushDirection.y < 0) {
-        entity.grounded = true
+      if (segmentLength > 0.001) {
+        const isVerticalSegment = Math.abs(segmentDx) < segmentLength * 0.3
+        const isHorizontalSegment = Math.abs(segmentDy) < segmentLength * 0.3
+
+        // Push entity away from polygon
+        const pushDistance = Math.max(1, (Math.max(entityBox.width, entityBox.height) / 2) - activeDistance + 0.1)
+        entity.position.x += activeNormal.x * pushDistance
+        entity.position.y += activeNormal.y * pushDistance
+
+        // Handle velocity based on segment orientation
+        if (isVerticalSegment) {
+          // Vertical wall - stop horizontal velocity, maintain vertical velocity
+          entity.velocity.x = 0
+
+          // Set wall collision flags
+          if (activeNormal.x > 0) {
+            entity.wallCollision.left = true
+          } else if (activeNormal.x < 0) {
+            entity.wallCollision.right = true
+          }
+
+        } else if (isHorizontalSegment) {
+          // Horizontal surface - handle as floor/ceiling
+          if (activeNormal.y < 0) {
+            // Landing on top surface
+            entity.grounded = true
+            entity.velocity.y = 0
+          } else {
+            // Hitting ceiling
+            entity.ceilingCollision = true
+            entity.velocity.y = 0
+          }
+        } else {
+          // Diagonal segment - use dot product method
+          const dotProduct = entity.velocity.x * activeNormal.x + entity.velocity.y * activeNormal.y
+          if (dotProduct < 0) {
+            entity.velocity.x -= dotProduct * activeNormal.x
+            entity.velocity.y -= dotProduct * activeNormal.y
+          }
+
+          // Check if entity is landing on top of polygon for diagonal surfaces
+          if (Math.abs(activeNormal.y) > 0.7 && activeNormal.y < 0) {
+            entity.grounded = true
+          }
+        }
       }
     }
   }

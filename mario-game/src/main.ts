@@ -157,6 +157,27 @@ GameAPI.importJSON(json)
 GameAPI.generateFromImageData(imageData)
 `)
 
+// Get the dialog generator
+const dialogGenerator = gameAPI.getEngine().getDialogGenerator();
+
+// Configure with your API key
+// Put key in env variable VITE_OPENROUTER_API_KEY
+dialogGenerator.configureOpenRouter(import.meta.env.VITE_OPENROUTER_API_KEY);
+
+// Test the connection (optional)
+const isConnected = await dialogGenerator.testOpenRouterConnection();
+console.log('AI system ready:', isConnected);
+
+// Enable AI (after configuration)
+const success = dialogGenerator.enableAI();
+
+console.log('AI enabled:', success);
+
+// Check if AI is enabled
+const isAIEnabled = dialogGenerator.isAIEnabled();
+
+console.log('Is AI enabled?', isAIEnabled);
+
 // Load custom level based on level_data.json
 gameAPI.clearLevel()
 
@@ -201,7 +222,7 @@ levelData.rigid_bodies.forEach((rigidBody) => {
   gameAPI.addPolygon(scaledContours, 'polygon')
 })
 // loadCustomLevel(gameAPI.getEngine())
-gameAPI.addGoal(scaledEndX, scaledEndY).buildLevel()
+gameAPI.addGoal(scaledEndX!, scaledEndY!).buildLevel()
 gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
 
 gameAPI.startGame()

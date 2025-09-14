@@ -9,6 +9,8 @@ import { Player } from './entities/Player'
 import { Platform } from './level/Platform'
 import { Entity } from './entities/Entity'
 import { SpriteLoader } from './sprites/SpriteLoader'
+import { DialogManager } from './ui/DialogManager'
+import { DialogGenerator } from './ui/DialogGenerator'
 
 export interface GameConfig {
   width?: number
@@ -31,6 +33,7 @@ export class GameEngine {
   private camera: Camera
   private currentLevel: Level | null = null
   private player: Player | null = null
+  private dialogManager: DialogManager
 
   private running = false
   private paused = false
@@ -44,12 +47,15 @@ export class GameEngine {
   private num_deaths = 0
   private coins = 0
   private spriteLoader: SpriteLoader
+  private dialogGenerator: DialogGenerator
   private goal_x
   private goal_y
   private start_x
   private start_y
-  private levelData: LevelData
+  // private levelData: LevelData | null = null
   private spritesInitialized = false
+  private lastDialogCheck = 0
+  private dialogCheckInterval = 10000 // Check every 15 seconds
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
     this.canvas = canvas
@@ -70,6 +76,8 @@ export class GameEngine {
     this.inputManager = new InputManager()
     this.camera = new Camera(this.canvas.width, this.canvas.height)
     this.spriteLoader = SpriteLoader.getInstance()
+    this.dialogManager = new DialogManager()
+    this.dialogGenerator = new DialogGenerator(this.dialogManager)
 
     this.fps = config.fps || 60
     this.frameInterval = 1000 / this.fps
@@ -215,9 +223,10 @@ export class GameEngine {
     // Update physics for all entities
     const entities = this.entityManager.getEntities()
     const platforms = this.currentLevel?.getPlatforms() || []
+    const polygons = this.currentLevel?.getPolygons() || []
 
     entities.forEach(entity => {
-      this.physics.updateEntity(entity, dt, platforms)
+      this.physics.updateEntity(entity, dt, platforms, polygons)
     })
 
     // Check collisions
@@ -233,6 +242,19 @@ export class GameEngine {
     // Update camera to follow player
     if (this.player) {
       this.camera.follow(this.player)
+    }
+
+    // Update dialogs
+    this.dialogManager.update()
+
+    // Check for teasing dialog opportunities every 10 seconds
+    const currentTime = Date.now()
+    if (currentTime - this.lastDialogCheck > this.dialogCheckInterval) {
+      this.lastDialogCheck = currentTime
+      // Fire-and-forget to avoid blocking the game loop
+      this.checkForTeasingDialogs().catch(error => {
+        console.warn('Error checking for teasing dialogs:', error)
+      })
     }
 
     // Remove dead entities
@@ -269,7 +291,10 @@ export class GameEngine {
         const playerReachedGoal = this.checkPlayerGoalOverlap(this.player!)
         if (playerReachedGoal) {
           console.log('🎉 Victory condition triggered!')
-          this.victory()
+          // Fire-and-forget to avoid blocking the game loop
+          this.victory().catch(error => {
+            console.warn('Error showing victory quote:', error)
+          })
         }
       }
     }
@@ -411,11 +436,18 @@ export class GameEngine {
   //   // TODO: Show game over screen
   // }
 
-  private victory() {
+  private async victory() {
     this.running = false
     this.victoryState = true  // Set victory state instead of stopping everything
     // this.score += 1000 // Bonus points for completing level
     console.log('🎉 Victory! Time elapsed: ', this.elapsed_time, ' Number of deaths: ', this.num_deaths, ' Coins: ', this.coins)
+
+    // Generate and display teasing victory quote
+    await this.dialogGenerator.showVictoryQuote(
+      this.num_deaths,
+      this.elapsed_time,
+      this.coins
+    )
 
     // Display victory message on canvas
     // this.renderer.clear()
@@ -441,13 +473,10 @@ export class GameEngine {
     // Clear canvas
     this.renderer.clear()
 
-    // Calculate score: coins are most important, deaths least, time is exponential penalty
-    // Example formula: score = coins * 1000 - deaths * 100 - Math.floor(1000 * Math.exp(0.01 * elapsed_time))
-    // You can tweak the weights and exponent as needed
     const formattedTime = this.elapsed_time.toFixed(2)
     const score = Math.max(
       0,
-      1000 + this.coins * 1000 - this.num_deaths * 200 + Math.floor(1000 * Math.exp(-0.1 * this.elapsed_time))
+      1000 + this.coins * 1000 - this.num_deaths * 200 + Math.floor(1000 * Math.exp(-0.05 * this.elapsed_time))
     )
 
     // If in victory state, show victory screen instead of normal rendering
@@ -513,6 +542,12 @@ export class GameEngine {
 
     this.ctx.restore()
 
+    // Render dialogs (not affected by camera)
+    const activeDialogs = this.dialogManager.getActiveDialogs()
+    activeDialogs.forEach(dialog => {
+      this.renderer.renderDialog(dialog)
+    })
+
     // Render UI (not affected by camera)
     this.renderer.renderUI({
       elapsed_time: this.elapsed_time,
@@ -529,6 +564,29 @@ export class GameEngine {
     if (elapsed_timeEl) elapsed_timeEl.textContent = this.elapsed_time.toString()
     if (num_deathsEl) num_deathsEl.textContent = this.num_deaths.toString()
     if (coinsEl) coinsEl.textContent = this.coins.toString()
+  }
+
+  private async checkForTeasingDialogs(): Promise<void> {
+    // Only check if we have a player and goal position
+    if (!this.player || this.goal_x === undefined || this.goal_y === undefined) {
+      return
+    }
+
+    // Don't show dialogs if we're in victory state
+    if (this.victoryState) {
+      return
+    }
+
+    const playerPos = this.getPlayerPosition()
+    if (!playerPos) return
+
+    // Generate teasing dialog based on game conditions
+    await this.dialogGenerator.showTeasingQuote(
+      this.num_deaths,
+      this.elapsed_time,
+      playerPos,
+      { x: this.goal_x, y: this.goal_y }
+    )
   }
 
   // Public API methods
@@ -554,5 +612,50 @@ export class GameEngine {
   public setGoal(x: number, y: number) {
     this.goal_x = x
     this.goal_y = y
+  }
+
+  // Dialog management methods
+  public getDialogManager(): DialogManager {
+    return this.dialogManager
+  }
+
+  public getDialogGenerator(): DialogGenerator {
+    return this.dialogGenerator
+  }
+
+  public addDialog(text: string, x: number, y: number, type: 'teasing' | 'story' | 'info' = 'teasing'): void {
+    this.dialogManager.addDialog(text, x, y, type)
+  }
+
+  public clearDialogs(): void {
+    this.dialogManager.clearDialogs()
+  }
+
+  public getElapsedTime(): number {
+    return this.elapsed_time
+  }
+
+  public getNumDeaths(): number {
+    return this.num_deaths
+  }
+
+  public getPlayerPosition(): { x: number, y: number } | null {
+    if (this.player) {
+      return { x: this.player.position.x, y: this.player.position.y }
+    }
+    return null
+  }
+
+  // Text-to-speech control methods
+  public setTTSEnabled(enabled: boolean): void {
+    this.dialogManager.setTTSEnabled(enabled)
+  }
+
+  public isTTSEnabled(): boolean {
+    return this.dialogManager.isTTSEnabled()
+  }
+
+  public stopTTS(): void {
+    this.dialogManager.stopTTS()
   }
 }

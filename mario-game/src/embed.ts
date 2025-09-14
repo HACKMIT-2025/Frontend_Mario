@@ -190,60 +190,60 @@ window.addEventListener('message', (event) => {
 })
 
 // 监听游戏事件并转发给父窗口
-function setupGameEventForwarding() {
-  // 监听分数变化
-  let lastScore = 0
-  setInterval(() => {
-    if (gameAPI && gameAPI.getScore) {
-      const currentScore = gameAPI.getScore()
-      if (currentScore !== lastScore) {
-        lastScore = currentScore
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage({
-            type: 'SCORE_UPDATE',
-            data: { score: currentScore }
-          }, '*')
-        }
-      }
-    }
-  }, 100)
+// function setupGameEventForwarding() {
+//   // 监听分数变化
+//   let lastScore = 0
+//   setInterval(() => {
+//     if (gameAPI && gameAPI.getScore) {
+//       const currentScore = gameAPI.getScore()
+//       if (currentScore !== lastScore) {
+//         lastScore = currentScore
+//         if (window.parent && window.parent !== window) {
+//           window.parent.postMessage({
+//             type: 'SCORE_UPDATE',
+//             data: { score: currentScore }
+//           }, '*')
+//         }
+//       }
+//     }
+//   }, 100)
 
-  // 监听游戏结束
-  window.addEventListener('gameOver', (event: any) => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({
-        type: 'GAME_OVER',
-        data: {
-          score: event.detail?.score || 0,
-          reason: event.detail?.reason || 'unknown'
-        }
-      }, '*')
-    }
-  })
+//   // 监听游戏结束
+//   window.addEventListener('gameOver', (event: any) => {
+//     if (window.parent && window.parent !== window) {
+//       window.parent.postMessage({
+//         type: 'GAME_OVER',
+//         data: {
+//           score: event.detail?.score || 0,
+//           reason: event.detail?.reason || 'unknown'
+//         }
+//       }, '*')
+//     }
+//   })
 
-  // 监听游戏开始
-  window.addEventListener('gameStart', () => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({
-        type: 'GAME_START',
-        data: { timestamp: Date.now() }
-      }, '*')
-    }
-  })
+//   // 监听游戏开始
+//   window.addEventListener('gameStart', () => {
+//     if (window.parent && window.parent !== window) {
+//       window.parent.postMessage({
+//         type: 'GAME_START',
+//         data: { timestamp: Date.now() }
+//       }, '*')
+//     }
+//   })
 
-  // 监听胜利
-  window.addEventListener('gameWin', (event: any) => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({
-        type: 'GAME_WIN',
-        data: {
-          score: event.detail?.score || 0,
-          time: event.detail?.time || 0
-        }
-      }, '*')
-    }
-  })
-}
+//   // 监听胜利
+//   window.addEventListener('gameWin', (event: any) => {
+//     if (window.parent && window.parent !== window) {
+//       window.parent.postMessage({
+//         type: 'GAME_WIN',
+//         data: {
+//           score: event.detail?.score || 0,
+//           time: event.detail?.time || 0
+//         }
+//       }, '*')
+//     }
+//   })
+// }
 
 // 错误处理
 window.addEventListener('unhandledrejection', (event) => {

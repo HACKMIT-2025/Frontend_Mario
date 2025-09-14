@@ -2,6 +2,7 @@ import { Entity } from '../entities/Entity'
 import { Level } from '../level/Level'
 import { SpriteLoader } from '../sprites/SpriteLoader'
 import { DebugMode } from '../debug/DebugMode'
+import { type Dialog } from '../ui/DialogManager'
 
 export interface UIData {
   elapsed_time: number
@@ -518,4 +519,102 @@ export class Renderer {
   public setBackgroundColor(color: string) {
     this.backgroundColor = color
   }
+
+  public renderDialog(dialog: Dialog) {
+    this.ctx.save()
+
+    // Position at bottom of screen as floating text
+    const margin = 20
+    const textWidth = this.width - (margin * 2)
+    const y = this.height - 80 // Near bottom but not touching
+
+    // Draw text with outline for better visibility on any background
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.font = 'bold 18px Arial'
+    this.ctx.textAlign = 'center'
+    this.ctx.textBaseline = 'bottom'
+
+    // Add text outline/stroke for better visibility
+    this.ctx.strokeStyle = '#000000'
+    this.ctx.lineWidth = 3
+
+    // Improved text wrapping for better handling of long quotes
+    const maxWidth = textWidth
+    const words = dialog.text.split(' ')
+    const lines: string[] = []
+    let currentLine = ''
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = currentLine + (currentLine ? ' ' : '') + words[i]
+      const metrics = this.ctx.measureText(testLine)
+
+      if (metrics.width > maxWidth && currentLine !== '') {
+        lines.push(currentLine)
+        currentLine = words[i]
+      } else {
+        currentLine = testLine
+      }
+    }
+    
+    // Add the final line if it has content
+    if (currentLine.trim()) {
+      lines.push(currentLine)
+    }
+
+    // Limit to 2 lines maximum with smart truncation
+    if (lines.length > 2) {
+      // Keep first line intact, truncate second line and add ellipsis
+      let secondLine = lines[1]
+      const ellipsis = '...'
+      
+      // Find the longest text that fits with ellipsis
+      while (secondLine.length > 0) {
+        const testText = secondLine + ellipsis
+        const metrics = this.ctx.measureText(testText)
+        if (metrics.width <= maxWidth) {
+          break
+        }
+        // Remove last word
+        const lastSpaceIndex = secondLine.lastIndexOf(' ')
+        if (lastSpaceIndex > 0) {
+          secondLine = secondLine.substring(0, lastSpaceIndex)
+        } else {
+          // Remove last character if no spaces
+          secondLine = secondLine.substring(0, secondLine.length - 1)
+        }
+      }
+      
+      lines[1] = secondLine + ellipsis
+      lines.length = 2 // Keep only first 2 lines
+    }
+
+    // Draw text with outline for each line (render in reverse order for bottom-up display)
+    const lineHeight = 24
+    const startY = y
+
+    // Reverse the lines array so first line appears at bottom, second line above it
+    lines.reverse().forEach((line, index) => {
+      const textY = startY - (index * lineHeight)
+      // Draw outline first
+      this.ctx.strokeText(line, this.width / 2, textY)
+      // Draw filled text on top
+      this.ctx.fillText(line, this.width / 2, textY)
+    })
+
+    this.ctx.restore()
+  }
+
+  // private roundRect(x: number, y: number, width: number, height: number, radius: number) {
+  //   this.ctx.beginPath()
+  //   this.ctx.moveTo(x + radius, y)
+  //   this.ctx.lineTo(x + width - radius, y)
+  //   this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
+  //   this.ctx.lineTo(x + width, y + height - radius)
+  //   this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
+  //   this.ctx.lineTo(x + radius, y + height)
+  //   this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
+  //   this.ctx.lineTo(x, y + radius)
+  //   this.ctx.quadraticCurveTo(x, y, x + radius, y)
+  //   this.ctx.closePath()
+  // }
 }
