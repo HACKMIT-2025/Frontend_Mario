@@ -115,6 +115,8 @@ export class LevelLoader {
             Math.max(0, Math.min(576, point.coordinates[1]))
           ] as [number, number]
         }))
+
+      console.log('🎯 Processed starting points:', validated.starting_points)
     }
 
     // 验证终点
@@ -127,10 +129,14 @@ export class LevelLoader {
             Math.max(0, Math.min(576, point.coordinates[1]))
           ] as [number, number]
         }))
+
+      console.log('🏁 Processed end points:', validated.end_points)
     }
 
     // 验证刚体（墙壁和平台）
     if (data.rigid_bodies && Array.isArray(data.rigid_bodies)) {
+      console.log('🔷 Processing rigid bodies:', data.rigid_bodies.length, 'found')
+
       validated.rigid_bodies = data.rigid_bodies
         .filter((body: any) => body.contour_points && Array.isArray(body.contour_points))
         .map((body: any) => ({
@@ -142,6 +148,8 @@ export class LevelLoader {
             ] as [number, number])
         }))
         .filter((body: any) => body.contour_points.length >= 3) // 至少3个点才能形成多边形
+
+      console.log('🔷 Processed rigid bodies:', validated.rigid_bodies.length, 'valid polygons')
     }
 
     // 验证金币（可选）
@@ -232,7 +240,11 @@ export class LevelLoader {
       const data = await response.json()
       console.log('📋 Level data loaded from JSON URL:', data)
 
-      return this.validateLevelData(data)
+      // Check if data has a nested level_data structure (from your backend)
+      const levelData = data.level_data || data
+      console.log('📋 Extracted level data:', levelData)
+
+      return this.validateLevelData(levelData)
     } catch (error) {
       console.error('❌ Failed to load from JSON URL:', error)
       throw error
