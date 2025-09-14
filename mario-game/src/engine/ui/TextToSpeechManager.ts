@@ -70,7 +70,7 @@ export class TextToSpeechManager {
     }
 
     // Set volume (slightly reduced to not be too intrusive)
-    utterance.volume = 0.7
+    utterance.volume = 1.0
 
     // Speak the text
     this.synth.speak(utterance)

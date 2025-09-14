@@ -54,6 +54,16 @@ export class PhysicsEngine {
     vel.x = Math.max(-this.maxVelocity.x, Math.min(this.maxVelocity.x, vel.x))
     vel.y = Math.max(-this.maxVelocity.y, Math.min(this.maxVelocity.y, vel.y))
 
+    // Apply velocity smoothing to prevent jittery movement on polygon edges
+    // This helps prevent entities from getting stuck due to micro-oscillations
+    const velocityThreshold = 0.1
+    if (Math.abs(vel.x) < velocityThreshold) {
+      vel.x *= 0.9 // Gradually reduce very small velocities
+    }
+    if (Math.abs(vel.y) < velocityThreshold && entity.grounded) {
+      vel.y = Math.max(vel.y, -0.1) // Prevent tiny upward velocities when grounded
+    }
+
     // Use Swept AABB for collision detection to prevent tunneling
     const movement = { x: vel.x, y: vel.y }
     const sweptResult = this.sweptAABB(entity, movement, platforms)
@@ -105,10 +115,19 @@ export class PhysicsEngine {
     // This handles cases where swept AABB doesn't catch polygon collisions
     if (polygons.length > 0) {
       const entityBox = this.getAABB(entity)
+      let hadPolygonCollision = false
+      
       for (const polygon of polygons) {
         if (this.polygonIntersectsAABB(polygon, entityBox)) {
           this.resolvePolygonCollision(entity, polygon, entityBox)
+          hadPolygonCollision = true
         }
+      }
+      
+      // If we had polygon collisions, do a final position validation
+      // to ensure the entity isn't still stuck inside any polygons
+      if (hadPolygonCollision) {
+        this.validateEntityPosition(entity, polygons)
       }
     }
   }
@@ -441,138 +460,176 @@ export class PhysicsEngine {
   }
 
   private resolvePolygonCollision(entity: Entity, polygon: Polygon, entityBox: AABB) {
-    // Find the collision segment considering entity's velocity direction
     const segments = polygon.getSegments()
-    let minDistance = Infinity
-    let closestEdge = null
-    let pushDirection = { x: 0, y: 0 }
-
-    // First, try to find segments that the entity is actually moving towards
     const entityCenter = {
       x: entityBox.x + entityBox.width / 2,
       y: entityBox.y + entityBox.height / 2
     }
 
-    let collisionSegment = null
-    let collisionDistance = Infinity
-    let collisionNormal = { x: 0, y: 0 }
-
+    // Find all nearby segments and calculate their penetration
+    const nearbySegments = []
     for (const segment of segments) {
       const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
       const dx = entityCenter.x - closestPoint.x
       const dy = entityCenter.y - closestPoint.y
       const distance = Math.sqrt(dx * dx + dy * dy)
 
-      // Determine segment orientation
       const segmentDx = segment.x2 - segment.x1
       const segmentDy = segment.y2 - segment.y1
       const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
 
       if (segmentLength < 0.001) continue // Skip degenerate segments
 
-      // Normalized segment direction
-      const segmentDir = { x: segmentDx / segmentLength, y: segmentDy / segmentLength }
+      // Calculate penetration depth (how much the entity overlaps with the segment)
+      const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
+      const penetrationDepth = entityRadius - distance
 
-      // Check if entity's velocity is pointing towards this segment
-      const velocityMagnitude = Math.sqrt(entity.velocity.x * entity.velocity.x + entity.velocity.y * entity.velocity.y)
-      if (velocityMagnitude > 0.1) {
-        const velocityDir = { x: entity.velocity.x / velocityMagnitude, y: entity.velocity.y / velocityMagnitude }
-
-        // Calculate if entity is moving towards the segment
-        const towardsSegment = -(dx * velocityDir.x + dy * velocityDir.y) > 0
-
-        if (towardsSegment && distance < collisionDistance) {
-          // For vertical segments (mainly vertical walls), enhance collision detection
-          const isVerticalSegment = Math.abs(segmentDir.x) < 0.3 && Math.abs(segmentDir.y) > 0.7
-          const hasHorizontalVelocity = Math.abs(entity.velocity.x) > Math.abs(entity.velocity.y) * 0.5
-
-          if (isVerticalSegment && hasHorizontalVelocity) {
-            // Enhanced collision detection for vertical segments with horizontal player movement
-            collisionSegment = segment
-            collisionDistance = distance
-
-            // Calculate proper collision normal for vertical wall
-            if (entity.velocity.x > 0) {
-              // Moving right, hit left side of wall
-              collisionNormal = { x: -1, y: 0 }
-            } else {
-              // Moving left, hit right side of wall
-              collisionNormal = { x: 1, y: 0 }
-            }
-          } else {
-            // Use standard collision detection for other segments
-            collisionSegment = segment
-            collisionDistance = distance
-            collisionNormal = distance > 0 ? { x: dx / distance, y: dy / distance } : { x: 0, y: -1 }
-          }
-        }
-      }
-
-      // Fallback to closest segment if no velocity-based collision found
-      if (distance < minDistance) {
-        minDistance = distance
-        closestEdge = segment
-        if (distance > 0) {
-          pushDirection = { x: dx / distance, y: dy / distance }
-        }
+      if (penetrationDepth > -2) { // Include segments that are very close
+        // Calculate segment normal (perpendicular to segment)
+        const segmentNormal = this.getSegmentNormal(segment, entityCenter)
+        
+        nearbySegments.push({
+          segment,
+          distance,
+          penetrationDepth,
+          normal: segmentNormal,
+          closestPoint
+        })
       }
     }
 
-    // Use collision segment if found, otherwise use closest segment
-    const activeSegment = collisionSegment || closestEdge
-    const activeDistance = collisionSegment ? collisionDistance : minDistance
-    const activeNormal = collisionSegment ? collisionNormal : pushDirection
+    if (nearbySegments.length === 0) return
 
-    if (activeSegment && activeDistance < Math.max(entityBox.width, entityBox.height) / 2) {
-      // Determine segment characteristics for appropriate response
-      const segmentDx = activeSegment.x2 - activeSegment.x1
-      const segmentDy = activeSegment.y2 - activeSegment.y1
-      const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
+    // Sort by penetration depth (most penetrated first)
+    nearbySegments.sort((a, b) => b.penetrationDepth - a.penetrationDepth)
 
-      if (segmentLength > 0.001) {
-        const isVerticalSegment = Math.abs(segmentDx) < segmentLength * 0.3
-        const isHorizontalSegment = Math.abs(segmentDy) < segmentLength * 0.3
+    // Use the most penetrated segment for primary collision response
+    const primarySegment = nearbySegments[0]
+    
+    if (primarySegment.penetrationDepth > 0) {
+      // Calculate a conservative push distance to avoid overshooting
+      const minPushDistance = 0.5 // Minimum push to ensure separation
+      const pushDistance = Math.max(minPushDistance, primarySegment.penetrationDepth + 0.1)
+      
+      // Apply position correction
+      entity.position.x += primarySegment.normal.x * pushDistance
+      entity.position.y += primarySegment.normal.y * pushDistance
 
-        // Push entity away from polygon
-        const pushDistance = Math.max(1, (Math.max(entityBox.width, entityBox.height) / 2) - activeDistance + 0.1)
-        entity.position.x += activeNormal.x * pushDistance
-        entity.position.y += activeNormal.y * pushDistance
+      // Apply velocity correction based on collision normal
+      this.applyVelocityCorrection(entity, primarySegment.normal, primarySegment.segment)
 
-        // Handle velocity based on segment orientation
-        if (isVerticalSegment) {
-          // Vertical wall - stop horizontal velocity, maintain vertical velocity
-          entity.velocity.x = 0
+      // Handle multiple segment interactions to prevent getting stuck on edges
+      if (nearbySegments.length > 1) {
+        this.handleMultiSegmentCollision(entity, nearbySegments)
+      }
+    }
+  }
 
-          // Set wall collision flags
-          if (activeNormal.x > 0) {
-            entity.wallCollision.left = true
-          } else if (activeNormal.x < 0) {
-            entity.wallCollision.right = true
+  private getSegmentNormal(segment: any, entityCenter: { x: number; y: number }): { x: number; y: number } {
+    const segmentDx = segment.x2 - segment.x1
+    const segmentDy = segment.y2 - segment.y1
+    const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
+
+    if (segmentLength < 0.001) return { x: 0, y: -1 }
+
+    // Calculate perpendicular vector (normal)
+    const perpX = -segmentDy / segmentLength
+    const perpY = segmentDx / segmentLength
+
+    // Choose the normal that points away from the polygon (towards the entity)
+    const segmentMidX = (segment.x1 + segment.x2) / 2
+    const segmentMidY = (segment.y1 + segment.y2) / 2
+    const toEntityX = entityCenter.x - segmentMidX
+    const toEntityY = entityCenter.y - segmentMidY
+
+    // Use dot product to determine correct normal direction
+    const dot = perpX * toEntityX + perpY * toEntityY
+    return dot >= 0 ? { x: perpX, y: perpY } : { x: -perpX, y: -perpY }
+  }
+
+  private applyVelocityCorrection(entity: Entity, normal: { x: number; y: number }, segment: any) {
+    const segmentDx = segment.x2 - segment.x1
+    const segmentDy = segment.y2 - segment.y1
+    const segmentLength = Math.sqrt(segmentDx * segmentDx + segmentDy * segmentDy)
+
+    if (segmentLength < 0.001) return
+
+    const isVerticalSegment = Math.abs(segmentDx) < segmentLength * 0.3
+    const isHorizontalSegment = Math.abs(segmentDy) < segmentLength * 0.3
+
+    if (isVerticalSegment) {
+      // Vertical wall - only stop horizontal velocity component
+      const horizontalVelocityComponent = entity.velocity.x * normal.x
+      if (horizontalVelocityComponent < 0) { // Moving into the wall
+        entity.velocity.x -= horizontalVelocityComponent * normal.x
+        
+        // Set wall collision flags
+        if (normal.x > 0) {
+          entity.wallCollision.left = true
+        } else if (normal.x < 0) {
+          entity.wallCollision.right = true
+        }
+      }
+    } else if (isHorizontalSegment) {
+      // Horizontal surface - handle vertical velocity
+      const verticalVelocityComponent = entity.velocity.y * normal.y
+      if (verticalVelocityComponent < 0) { // Moving into the surface
+        entity.velocity.y -= verticalVelocityComponent * normal.y
+        
+        if (normal.y < -0.7) {
+          // Landing on top surface
+          entity.grounded = true
+        } else if (normal.y > 0.7) {
+          // Hitting ceiling
+          entity.ceilingCollision = true
+        }
+      }
+    } else {
+      // Diagonal segment - use reflection for smooth sliding
+      const velocityDotNormal = entity.velocity.x * normal.x + entity.velocity.y * normal.y
+      if (velocityDotNormal < 0) { // Moving into the surface
+        // Reflect velocity component that's moving into the surface
+        entity.velocity.x -= velocityDotNormal * normal.x
+        entity.velocity.y -= velocityDotNormal * normal.y
+        
+        // Check if this is a floor-like diagonal surface
+        if (normal.y < -0.5) {
+          entity.grounded = true
+        }
+      }
+    }
+  }
+
+  private handleMultiSegmentCollision(entity: Entity, nearbySegments: any[]) {
+    // When colliding with multiple segments, we want to prevent getting stuck
+    // This commonly happens at corners or when transitioning between segments
+    
+    if (nearbySegments.length >= 2) {
+      const segment1 = nearbySegments[0]
+      const segment2 = nearbySegments[1]
+      
+      // Check if we're at a corner (two segments with significantly different normals)
+      const dotProduct = segment1.normal.x * segment2.normal.x + segment1.normal.y * segment2.normal.y
+      
+      if (dotProduct < 0.5) { // Segments are at an angle > 60 degrees
+        // Average the normals for a smoother resolution
+        const avgNormalX = (segment1.normal.x + segment2.normal.x) / 2
+        const avgNormalY = (segment1.normal.y + segment2.normal.y) / 2
+        const avgNormalLength = Math.sqrt(avgNormalX * avgNormalX + avgNormalY * avgNormalY)
+        
+        if (avgNormalLength > 0.001) {
+          const normalizedAvgNormal = {
+            x: avgNormalX / avgNormalLength,
+            y: avgNormalY / avgNormalLength
           }
-
-        } else if (isHorizontalSegment) {
-          // Horizontal surface - handle as floor/ceiling
-          if (activeNormal.y < 0) {
-            // Landing on top surface
-            entity.grounded = true
-            entity.velocity.y = 0
-          } else {
-            // Hitting ceiling
-            entity.ceilingCollision = true
-            entity.velocity.y = 0
-          }
-        } else {
-          // Diagonal segment - use dot product method
-          const dotProduct = entity.velocity.x * activeNormal.x + entity.velocity.y * activeNormal.y
-          if (dotProduct < 0) {
-            entity.velocity.x -= dotProduct * activeNormal.x
-            entity.velocity.y -= dotProduct * activeNormal.y
-          }
-
-          // Check if entity is landing on top of polygon for diagonal surfaces
-          if (Math.abs(activeNormal.y) > 0.7 && activeNormal.y < 0) {
-            entity.grounded = true
-          }
+          
+          // Apply additional small push in the averaged direction
+          entity.position.x += normalizedAvgNormal.x * 0.5
+          entity.position.y += normalizedAvgNormal.y * 0.5
+          
+          // Reduce velocity to prevent bouncing between segments
+          entity.velocity.x *= 0.8
+          entity.velocity.y *= 0.8
         }
       }
     }
@@ -839,6 +896,99 @@ export class PhysicsEngine {
     }
 
     return { hit: true, time: Math.max(0, tNear), normal }
+  }
+
+  private validateEntityPosition(entity: Entity, polygons: Polygon[]) {
+    // Final validation to ensure entity isn't stuck inside any polygons
+    // This prevents scenarios where collision resolution might leave the entity
+    // in an invalid state, especially when dealing with complex polygon shapes
+    
+    const entityBox = this.getAABB(entity)
+    let maxAttempts = 5
+    let attempts = 0
+    
+    while (attempts < maxAttempts) {
+      let needsAdjustment = false
+      let totalPushX = 0
+      let totalPushY = 0
+      let validCollisions = 0
+      
+      for (const polygon of polygons) {
+        if (this.polygonIntersectsAABB(polygon, entityBox)) {
+          // Find the minimal push direction to get out of this polygon
+          const pushVector = this.findMinimalEscapeVector(entity, polygon, entityBox)
+          if (pushVector) {
+            totalPushX += pushVector.x
+            totalPushY += pushVector.y
+            validCollisions++
+            needsAdjustment = true
+          }
+        }
+      }
+      
+      if (!needsAdjustment) {
+        break // Entity is no longer stuck
+      }
+      
+      if (validCollisions > 0) {
+        // Apply averaged push to get unstuck
+        const avgPushX = totalPushX / validCollisions
+        const avgPushY = totalPushY / validCollisions
+        
+        entity.position.x += avgPushX
+        entity.position.y += avgPushY
+        
+        // Update entity box for next iteration
+        entityBox.x = entity.position.x
+        entityBox.y = entity.position.y
+        
+        // Dampen velocity to prevent oscillation
+        entity.velocity.x *= 0.9
+        entity.velocity.y *= 0.9
+      }
+      
+      attempts++
+    }
+    
+    // If we still couldn't resolve after max attempts, apply emergency push
+    if (attempts >= maxAttempts) {
+      // Push entity upward as last resort (common escape direction)
+      entity.position.y -= 5
+      entity.velocity.x *= 0.5
+      entity.velocity.y *= 0.5
+    }
+  }
+
+  private findMinimalEscapeVector(_entity: Entity, polygon: Polygon, entityBox: AABB): { x: number; y: number } | null {
+    const segments = polygon.getSegments()
+    const entityCenter = {
+      x: entityBox.x + entityBox.width / 2,
+      y: entityBox.y + entityBox.height / 2
+    }
+    
+    let minEscapeDistance = Infinity
+    let escapeVector = null
+    
+    for (const segment of segments) {
+      const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
+      const dx = entityCenter.x - closestPoint.x
+      const dy = entityCenter.y - closestPoint.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+      
+      if (distance < minEscapeDistance && distance > 0.001) {
+        minEscapeDistance = distance
+        const normal = this.getSegmentNormal(segment, entityCenter)
+        const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
+        const pushDistance = entityRadius - distance + 0.5 // Small buffer
+        
+        escapeVector = {
+          x: normal.x * pushDistance,
+          y: normal.y * pushDistance
+        }
+      }
+    }
+    
+    return escapeVector
   }
 
   // Getters and setters
