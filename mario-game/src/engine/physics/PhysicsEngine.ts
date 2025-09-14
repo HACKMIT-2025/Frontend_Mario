@@ -59,6 +59,7 @@ export class PhysicsEngine {
     const sweptResult = this.sweptAABB(entity, movement, platforms)
 
     if (sweptResult.hit && sweptResult.time < 1.0) {
+      console.log('Collision detected via Swept AABB')
       // Collision detected - move entity to collision point
       pos.x += movement.x * sweptResult.time
       pos.y += movement.y * sweptResult.time

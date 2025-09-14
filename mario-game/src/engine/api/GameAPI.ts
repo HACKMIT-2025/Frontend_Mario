@@ -73,6 +73,19 @@ export class GameAPI {
   }
 
   /**
+   * Add a spike hazard to the level (triangular metallic gray spike that kills player on contact)
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param size - Size factor (default 32, scales the spike)
+   */
+  addSpike(x: number, y: number, size = 32): this {
+    // Add as enemy type 'spike' with custom size
+    this.builder.addEnemy(x, y, 'spike', size)
+    this.log(`Spike added at (${x}, ${y}) size: ${size}x${size}`)
+    return this
+  }
+
+  /**
    * Add a coin to the level
    */
   addCoin(x: number, y: number): this {

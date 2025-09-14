@@ -7,9 +7,11 @@ export class Enemy extends Entity {
   private animationFrame = 0
   private animationTimer = 0
 
-  constructor(x: number, y: number, type: string) {
-    const size = type === 'bowser' ? 64 : 32
-    super(x, y, size, size, 'enemy')
+  constructor(x: number, y: number, type: string, size = 32) {
+    // Default size based on type, but allow custom size for spikes
+    const defaultSize = type === 'bowser' ? 64 : 32
+    const finalSize = type === 'spike' ? size : defaultSize
+    super(x, y, finalSize, finalSize, 'enemy')
     this.enemyType = type
     this.setPhysics({ solid: true, gravity: true, mass: 1 })
 
@@ -28,23 +30,30 @@ export class Enemy extends Entity {
       case 'bowser':
         this.speed = 0.5
         break
+      case 'spike':
+        this.speed = 0  // Static hazard
+        this.setPhysics({ solid: false, gravity: false })
+        break
     }
   }
 
   public update(dt: number) {
     // Simple patrol AI
-    if (this.enemyType !== 'firebar') {
+    if (this.enemyType !== 'firebar' && this.enemyType !== 'spike') {
       this.velocity.x = this.speed * this.direction
-    } else {
+    } else if (this.enemyType === 'firebar') {
       // Firebar rotation
       this.animationFrame += dt * 5
     }
+    // Spikes don't move or animate
 
     // Animation
-    this.animationTimer += dt
-    if (this.animationTimer > 0.2) {
-      this.animationFrame = (this.animationFrame + 1) % 4
-      this.animationTimer = 0
+    if (this.enemyType !== 'spike') {
+      this.animationTimer += dt
+      if (this.animationTimer > 0.2) {
+        this.animationFrame = (this.animationFrame + 1) % 4
+        this.animationTimer = 0
+      }
     }
   }
 
@@ -87,6 +96,45 @@ export class Enemy extends Entity {
         for (let i = 0; i < 4; i++) {
           ctx.fillRect(this.position.x + i * 16, this.position.y - 8, 8, 8)
         }
+        break
+
+      case 'spike':
+        // Draw triangular metallic gray spike
+
+        // Main spike body - equilateral triangle
+        ctx.fillStyle = '#808080'  // Metallic gray base
+        ctx.beginPath()
+        ctx.moveTo(this.position.x + this.width/2, this.position.y)  // Top point
+        ctx.lineTo(this.position.x, this.position.y + this.height)   // Bottom left
+        ctx.lineTo(this.position.x + this.width, this.position.y + this.height)  // Bottom right
+        ctx.closePath()
+        ctx.fill()
+
+        // Metallic highlight on left side
+        ctx.fillStyle = '#A0A0A0'  // Lighter gray for highlight
+        ctx.beginPath()
+        ctx.moveTo(this.position.x + this.width/2, this.position.y)
+        ctx.lineTo(this.position.x + this.width/4, this.position.y + this.height/2)
+        ctx.lineTo(this.position.x + this.width/2, this.position.y + this.height)
+        ctx.closePath()
+        ctx.fill()
+
+        // Darker shadow on right side
+        ctx.fillStyle = '#606060'  // Darker gray for shadow
+        ctx.beginPath()
+        ctx.moveTo(this.position.x + this.width/2, this.position.y)
+        ctx.lineTo(this.position.x + this.width*3/4, this.position.y + this.height/2)
+        ctx.lineTo(this.position.x + this.width/2, this.position.y + this.height)
+        ctx.closePath()
+        ctx.fill()
+
+        // Bottom edge highlight
+        ctx.strokeStyle = '#C0C0C0'
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(this.position.x, this.position.y + this.height)
+        ctx.lineTo(this.position.x + this.width, this.position.y + this.height)
+        ctx.stroke()
         break
 
       default:

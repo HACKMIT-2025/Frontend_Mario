@@ -16,10 +16,12 @@ export class Player extends Entity {
   private spriteLoader: SpriteLoader
   private facing: 'left' | 'right' = 'right'
 
-  private jumpPower = 12
+  private jumpPower = 10
   private moveSpeed = 5
   private runSpeed = 8
   private isRunning = false
+  private remainingJumps = 2
+  private jumpCD = 0 // frames of cooldown between jumps
 
   constructor(x: number, y: number) {
     super(x, y, 32, 32, 'player')
@@ -90,6 +92,11 @@ export class Player extends Entity {
     // Update facing direction
     if (this.velocity.x > 0) this.facing = 'right'
     else if (this.velocity.x < 0) this.facing = 'left'
+
+    // Reset double jump when landing on ground
+    if (this.grounded) {
+      this.remainingJumps = 2
+    }
   }
 
   public render(ctx: CanvasRenderingContext2D) {
@@ -189,8 +196,15 @@ export class Player extends Entity {
     }
 
     // Jump - respect ceiling collision
-    if (input.jump && this.grounded && !this.ceilingCollision) {
-      this.velocity.y = -this.jumpPower
+    if (input.jump && this.jumpCD == 0 && this.remainingJumps > 0){
+      this.jumpCD = 10
+      this.remainingJumps -= 1
+      if (!this.ceilingCollision) {
+        console.log('Performing jump')
+        this.velocity.y = -this.jumpPower
+      }
+    } else if (this.jumpCD > 0) {
+      this.jumpCD -= 1
     }
 
     // Variable jump height
@@ -277,5 +291,6 @@ export class Player extends Entity {
     this.invulnerable = false
     this.fireballEnabled = false
     this.velocity = { x: 0, y: 0 }
+    this.hasDoubleJumped = false
   }
 }

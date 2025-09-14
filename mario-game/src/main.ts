@@ -1,6 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
-import levelData from '../level_data.json'
+import levelData from '../../level_data.json'
 
 // Initialize game container with error handling
 const app = document.querySelector<HTMLDivElement>('#app')
@@ -126,6 +126,10 @@ GameAPI.generateFromImageData(imageData)
 // Load custom level based on level_data.json
 gameAPI.clearLevel()
 
+// gameAPI.loadClassicLevel()
+
+// gameAPI.buildLevel().startGame()
+
 // Add starting point (Mario spawn location) from level_data.json
 const startPoint = levelData.starting_points[0]
 if (startPoint) {
@@ -141,12 +145,32 @@ const endPoint = levelData.end_points[0]
 if (endPoint) {
   const [endX, endY] = endPoint.coordinates
   const scaledEndX = endX
-  const scaledEndY = endY
+  const scaledEndY = endY - 30
   gameAPI.addGoalPipe(scaledEndX, scaledEndY)
 }
 
+const coins = levelData.coins
+coins.forEach((coin) => {
+  const [coinX, coinY] = coin.coordinates
+  gameAPI.addCoin(coinX, coinY)
+})
+
+const spikes = levelData.spikes
+spikes.forEach((spike) => {
+  const [spikeX, spikeY] = spike.coordinates
+  gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
+})
+
 // Add ground platform for safety
 // gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
+
+// Add demo spikes to showcase the new addSpike functionality
+// // Large spike (64x64)
+// gameAPI.addSpike(300, 400, 64)
+// // Medium spike (48x48)
+// gameAPI.addSpike(400, 416, 48)
+// // Standard spike (32x32)
+// gameAPI.addSpike(500, 432, 32)
 
 // Add rigid bodies as polygons from level_data.json
 levelData.rigid_bodies.forEach((rigidBody) => {

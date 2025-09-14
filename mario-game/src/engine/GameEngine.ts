@@ -334,6 +334,12 @@ export class GameEngine {
       this.score += 10
       entity.dead = true
     } else if (entity.type === 'enemy') {
+      // Special handling for spike enemies - they always damage the player
+      if (entity.enemyType === 'spike') {
+        this.playerHit()
+        return
+      }
+      
       if (this.player.velocity.y > 0 && this.player.position.y < entity.position.y) {
         // Player jumping on enemy
         this.score += 100
