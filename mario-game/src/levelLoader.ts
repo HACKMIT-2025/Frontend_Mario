@@ -212,10 +212,50 @@ export class LevelLoader {
   }
 
   /**
+   * 从JSON URL直接加载关卡数据
+   */
+  static async loadFromJSONUrl(jsonUrl: string): Promise<LevelData> {
+    try {
+      console.log(`🌐 Loading level from JSON URL: ${jsonUrl}`)
+
+      const response = await fetch(jsonUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log('📋 Level data loaded from JSON URL:', data)
+
+      return this.validateLevelData(data)
+    } catch (error) {
+      console.error('❌ Failed to load from JSON URL:', error)
+      throw error
+    }
+  }
+
+  /**
    * 主加载函数 - 自动选择最佳加载方式
    */
   static async loadLevelData(apiUrl?: string): Promise<LevelData> {
-    // 1. 首先尝试从URL获取levelId
+    const urlParams = new URLSearchParams(window.location.search)
+
+    // 1. 优先尝试从JSON URL直接加载（新功能）
+    const jsonUrl = urlParams.get('json')
+    if (jsonUrl) {
+      try {
+        return await this.loadFromJSONUrl(jsonUrl)
+      } catch (error) {
+        console.warn('⚠️ Failed to load from JSON URL, trying other methods...')
+      }
+    }
+
+    // 2. 尝试从API获取levelId
     const levelId = this.getLevelId()
     if (levelId) {
       try {
@@ -225,13 +265,13 @@ export class LevelLoader {
       }
     }
 
-    // 2. 尝试从URL参数直接加载数据
+    // 3. 尝试从URL参数直接加载Base64数据
     const urlData = this.loadFromURL()
     if (urlData) {
       return urlData
     }
 
-    // 3. 最后使用默认数据
+    // 4. 最后使用默认数据
     console.log('📋 Using default level data')
     return this.getDefaultLevelData()
   }
