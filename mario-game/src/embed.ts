@@ -117,6 +117,7 @@ async function buildGameFromLevelData(levelData: LevelData) {
   }
 
   // 添加刚体（墙壁和平台）
+  let polygonCount = 0
   if (levelData.rigid_bodies && levelData.rigid_bodies.length > 0) {
     levelData.rigid_bodies.forEach((body, index) => {
       if (body.contour_points && body.contour_points.length >= 3) {
@@ -132,6 +133,7 @@ async function buildGameFromLevelData(levelData: LevelData) {
           }
 
           gameAPI.addPolygon(body.contour_points, polygonType)
+          polygonCount++
           console.log(`🔷 Added ${polygonType} with ${body.contour_points.length} points`)
         } catch (error) {
           console.warn(`⚠️ Failed to add polygon ${index}:`, error)
@@ -141,10 +143,12 @@ async function buildGameFromLevelData(levelData: LevelData) {
   }
 
   // 添加金币（如果有）
+  let coinCount = 0
   if (levelData.coins && levelData.coins.length > 0) {
     levelData.coins.forEach((coin, index) => {
       try {
         gameAPI.addCoin(coin.x, coin.y)
+        coinCount++
         console.log(`🪙 Added coin at: (${coin.x}, ${coin.y})`)
       } catch (error) {
         console.warn(`⚠️ Failed to add coin ${index}:`, error)
@@ -154,8 +158,8 @@ async function buildGameFromLevelData(levelData: LevelData) {
 
   // 添加钉刺（新功能，来自本地引擎）
   let spikeCount = 0
-  if ((levelData as any).spikes && (levelData as any).spikes.length > 0) {
-    (levelData as any).spikes.forEach((spike: any, index: number) => {
+  if (levelData.spikes && levelData.spikes.length > 0) {
+    levelData.spikes.forEach((spike, index) => {
       try {
         const [spikeX, spikeY] = spike.coordinates
         gameAPI.addSpike(spikeX, spikeY, 32) // 标准 32x32 钉刺
@@ -187,7 +191,47 @@ async function buildGameFromLevelData(levelData: LevelData) {
   // 设置关卡数据到引擎（重要：来自本地引擎的改进）
   gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
 
-  console.log(`✅ Level built: spikes=${spikeCount}, enemies=${enemyCount}`)
+  console.log(`✅ Level built: ${polygonCount} platforms, ${coinCount} coins, ${spikeCount} spikes, ${enemyCount} enemies`)
+
+  // 配置AI对话系统（学习本地引擎）
+  await configureAIDialogSystem(gameAPI)
+}
+
+// 配置AI对话系统
+async function configureAIDialogSystem(gameAPI: GameAPI) {
+  try {
+    console.log('🤖 Configuring AI dialog system...')
+
+    // 获取对话生成器
+    const dialogGenerator = gameAPI.getEngine().getDialogGenerator()
+
+    // 配置OpenRouter API密钥
+    if (import.meta.env.VITE_OPENROUTER_API_KEY) {
+      dialogGenerator.configureOpenRouter(import.meta.env.VITE_OPENROUTER_API_KEY)
+
+      // 测试连接
+      const isConnected = await dialogGenerator.testOpenRouterConnection()
+      console.log('🌐 AI system ready:', isConnected)
+
+      // 启用AI
+      const success = dialogGenerator.enableAI()
+      console.log('🤖 AI enabled:', success)
+
+      // 检查AI是否启用
+      const isAIEnabled = dialogGenerator.isAIEnabled()
+      console.log('🔍 Is AI enabled?', isAIEnabled)
+
+      if (isAIEnabled) {
+        console.log('✅ AI dialog system configured successfully')
+      } else {
+        console.warn('⚠️ AI system failed to enable')
+      }
+    } else {
+      console.warn('⚠️ VITE_OPENROUTER_API_KEY not found, AI dialog system disabled')
+    }
+  } catch (error) {
+    console.error('❌ Error configuring AI dialog system:', error)
+  }
 }
 
 // 监听父窗口消息
@@ -297,7 +341,7 @@ window.addEventListener('unhandledrejection', (event) => {
 // 初始化游戏
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📱 DOM loaded, initializing embed game...')
-  setupGameEventForwarding()
+  // setupGameEventForwarding() // Commented out
   initializeEmbedGame()
 })
 
@@ -305,11 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     console.log('📱 DOM loaded, initializing embed game...')
-    setupGameEventForwarding()
+    // setupGameEventForwarding() // Commented out
     initializeEmbedGame()
   })
 } else {
   console.log('📱 DOM already loaded, initializing embed game...')
-  setupGameEventForwarding()
+  // setupGameEventForwarding() // Commented out
   initializeEmbedGame()
 }
