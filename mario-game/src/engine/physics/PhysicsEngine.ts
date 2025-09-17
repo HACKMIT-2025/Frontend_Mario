@@ -60,8 +60,9 @@ export class PhysicsEngine {
     if (Math.abs(vel.x) < velocityThreshold) {
       vel.x *= 0.9 // Gradually reduce very small velocities
     }
+    // When grounded, completely stop vertical velocity if it's very small
     if (Math.abs(vel.y) < velocityThreshold && entity.grounded) {
-      vel.y = Math.max(vel.y, -0.1) // Prevent tiny upward velocities when grounded
+      vel.y = 0 // Stop vertical movement completely when grounded
     }
 
     // Use Swept AABB for collision detection to prevent tunneling
@@ -96,9 +97,12 @@ export class PhysicsEngine {
         }
       }
 
-      // Add small buffer to prevent sticking
-      pos.x += sweptResult.normal.x * 0.1
-      pos.y += sweptResult.normal.y * 0.1
+      // Add small buffer to prevent sticking (only for horizontal collisions)
+      if (Math.abs(sweptResult.normal.x) > 0.5) {
+        pos.x += sweptResult.normal.x * 0.1
+      }
+      // Don't add buffer for vertical collisions to prevent ground jitter
+      // pos.y += sweptResult.normal.y * 0.1
     } else {
       // No platform collision - apply full movement
       pos.x += movement.x
@@ -238,27 +242,15 @@ export class PhysicsEngine {
         const platformCenterY = platformBox.y + platformBox.height / 2
 
         if (comingFromLeft) {
-          entity.position.x = platformBox.x - entity.width - 0.1 // Small buffer to prevent sticking
+          entity.position.x = platformBox.x - entity.width - 0.01 // Smaller buffer
           entity.wallCollision.right = true
-          // If collision occurs above platform's mass center, apply elastic collision
-          if (entityCenterY < platformCenterY) {
-            // Complete elastic collision - reverse velocity with same magnitude
-            entity.velocity.x = -Math.abs(entity.velocity.x)
-          } else {
-            // Normal collision - stop movement
-            entity.velocity.x = 0
-          }
+          // Always stop horizontal movement on wall collision
+          entity.velocity.x = 0
         } else if (comingFromRight) {
-          entity.position.x = platformBox.x + platformBox.width + 0.1 // Small buffer to prevent sticking
+          entity.position.x = platformBox.x + platformBox.width + 0.01 // Smaller buffer
           entity.wallCollision.left = true
-          // If collision occurs above platform's mass center, apply elastic collision
-          if (entityCenterY < platformCenterY) {
-            // Complete elastic collision - reverse velocity with same magnitude
-            entity.velocity.x = Math.abs(entity.velocity.x)
-          } else {
-            // Normal collision - stop movement
-            entity.velocity.x = 0
-          }
+          // Always stop horizontal movement on wall collision
+          entity.velocity.x = 0
         }
       }
 
@@ -276,14 +268,8 @@ export class PhysicsEngine {
         } else if (comingFromBottom) {
           entity.position.y = platformBox.y + platformBox.height
           entity.ceilingCollision = true
-          // If collision occurs to the side of platform's mass center, apply elastic collision
-          if (Math.abs(entityCenterX - platformCenterX) > platformBox.width / 4) {
-            // Complete elastic collision - reverse velocity with same magnitude
-            entity.velocity.y = Math.abs(entity.velocity.y)
-          } else {
-            // Normal ceiling collision - stop movement
-            entity.velocity.y = 0
-          }
+          // Always stop vertical movement on ceiling collision
+          entity.velocity.y = 0
         }
       }
 
@@ -297,23 +283,15 @@ export class PhysicsEngine {
         if (overlapX < overlapY) {
           // Horizontal collision
           if (entityBox.x < platformBox.x) {
-            entity.position.x = platformBox.x - entity.width - 0.1 // Small buffer to prevent sticking
+            entity.position.x = platformBox.x - entity.width - 0.01 // Smaller buffer
             entity.wallCollision.right = true
-            // Apply elastic collision if above mass center
-            if (entityCenterY < platformCenterY) {
-              entity.velocity.x = -Math.abs(entity.velocity.x)
-            } else {
-              entity.velocity.x = 0
-            }
+            // Always stop horizontal movement
+            entity.velocity.x = 0
           } else {
-            entity.position.x = platformBox.x + platformBox.width + 0.1 // Small buffer to prevent sticking
+            entity.position.x = platformBox.x + platformBox.width + 0.01 // Smaller buffer
             entity.wallCollision.left = true
-            // Apply elastic collision if above mass center
-            if (entityCenterY < platformCenterY) {
-              entity.velocity.x = Math.abs(entity.velocity.x)
-            } else {
-              entity.velocity.x = 0
-            }
+            // Always stop horizontal movement
+            entity.velocity.x = 0
           }
         } else {
           // Vertical collision
@@ -324,12 +302,8 @@ export class PhysicsEngine {
           } else {
             entity.position.y = platformBox.y + platformBox.height
             entity.ceilingCollision = true
-            // Apply elastic collision if to the side of mass center
-            if (Math.abs(entityCenterX - platformCenterX) > platformBox.width / 4) {
-              entity.velocity.y = Math.abs(entity.velocity.y)
-            } else {
-              entity.velocity.y = 0
-            }
+            // Always stop vertical movement on ceiling collision
+            entity.velocity.y = 0
           }
         }
       }
@@ -343,21 +317,13 @@ export class PhysicsEngine {
       if (overlapX < overlapY) {
         // Horizontal collision
         if (entityBox.x < platformBox.x) {
-          entity.position.x = platformBox.x - entity.width - 0.1 // Small buffer to prevent sticking
-          // Apply elastic collision if above mass center
-          if (entityCenterY < platformCenterY) {
-            entity.velocity.x = -Math.abs(entity.velocity.x)
-          } else {
-            entity.velocity.x = 0
-          }
+          entity.position.x = platformBox.x - entity.width - 0.01 // Smaller buffer
+          // Always stop horizontal movement
+          entity.velocity.x = 0
         } else {
-          entity.position.x = platformBox.x + platformBox.width + 0.1 // Small buffer to prevent sticking
-          // Apply elastic collision if above mass center
-          if (entityCenterY < platformCenterY) {
-            entity.velocity.x = Math.abs(entity.velocity.x)
-          } else {
-            entity.velocity.x = 0
-          }
+          entity.position.x = platformBox.x + platformBox.width + 0.01 // Smaller buffer
+          // Always stop horizontal movement
+          entity.velocity.x = 0
         }
       } else {
         // Vertical collision
@@ -367,12 +333,8 @@ export class PhysicsEngine {
           entity.velocity.y = 0
         } else {
           entity.position.y = platformBox.y + platformBox.height
-          // Apply elastic collision if to the side of mass center
-          if (Math.abs(entityCenterX - platformCenterX) > platformBox.width / 4) {
-            entity.velocity.y = Math.abs(entity.velocity.y)
-          } else {
-            entity.velocity.y = 0
-          }
+          // Always stop vertical movement
+          entity.velocity.y = 0
         }
       }
     }
@@ -508,12 +470,18 @@ export class PhysicsEngine {
     
     if (primarySegment.penetrationDepth > 0) {
       // Calculate a conservative push distance to avoid overshooting
-      const minPushDistance = 0.5 // Minimum push to ensure separation
-      const pushDistance = Math.max(minPushDistance, primarySegment.penetrationDepth + 0.1)
+      const minPushDistance = 0.1 // Smaller minimum push to reduce jitter
+      const pushDistance = Math.max(minPushDistance, primarySegment.penetrationDepth + 0.01) // Smaller buffer
       
-      // Apply position correction
-      entity.position.x += primarySegment.normal.x * pushDistance
-      entity.position.y += primarySegment.normal.y * pushDistance
+      // Apply position correction (don't push vertically if on ground to prevent jitter)
+      if (Math.abs(primarySegment.normal.y) > 0.7 && primarySegment.normal.y < 0 && entity.grounded) {
+        // On ground surface, only correct position without adding extra push
+        entity.position.y = primarySegment.closestPoint.y - entity.height
+      } else {
+        // Normal position correction for walls and other surfaces
+        entity.position.x += primarySegment.normal.x * pushDistance
+        entity.position.y += primarySegment.normal.y * pushDistance
+      }
 
       // Apply velocity correction based on collision normal
       this.applyVelocityCorrection(entity, primarySegment.normal, primarySegment.segment)
@@ -574,7 +542,7 @@ export class PhysicsEngine {
       // Horizontal surface - handle vertical velocity
       const verticalVelocityComponent = entity.velocity.y * normal.y
       if (verticalVelocityComponent < 0) { // Moving into the surface
-        entity.velocity.y -= verticalVelocityComponent * normal.y
+        entity.velocity.y = 0 // Completely stop vertical velocity on horizontal surfaces
         
         if (normal.y < -0.7) {
           // Landing on top surface
@@ -595,6 +563,10 @@ export class PhysicsEngine {
         // Check if this is a floor-like diagonal surface
         if (normal.y < -0.5) {
           entity.grounded = true
+          // Reduce vertical velocity on slopes to prevent bouncing
+          if (entity.velocity.y > 0) {
+            entity.velocity.y *= 0.5
+          }
         }
       }
     }
@@ -623,13 +595,20 @@ export class PhysicsEngine {
             y: avgNormalY / avgNormalLength
           }
           
-          // Apply additional small push in the averaged direction
-          entity.position.x += normalizedAvgNormal.x * 0.5
-          entity.position.y += normalizedAvgNormal.y * 0.5
+          // Apply additional small push in the averaged direction (only horizontal for corners)
+          if (Math.abs(normalizedAvgNormal.x) > 0.5) {
+            entity.position.x += normalizedAvgNormal.x * 0.1 // Smaller push
+          }
+          // Only push vertically if not grounded to avoid ground jitter
+          if (!entity.grounded && Math.abs(normalizedAvgNormal.y) > 0.5) {
+            entity.position.y += normalizedAvgNormal.y * 0.1
+          }
           
           // Reduce velocity to prevent bouncing between segments
-          entity.velocity.x *= 0.8
-          entity.velocity.y *= 0.8
+          entity.velocity.x *= 0.9 // Less aggressive damping
+          if (!entity.grounded) {
+            entity.velocity.y *= 0.9
+          }
         }
       }
     }
@@ -943,8 +922,13 @@ export class PhysicsEngine {
         entityBox.y = entity.position.y
         
         // Dampen velocity to prevent oscillation
-        entity.velocity.x *= 0.9
-        entity.velocity.y *= 0.9
+        entity.velocity.x *= 0.95 // Less aggressive damping
+        // Only dampen vertical velocity if not grounded
+        if (!entity.grounded) {
+          entity.velocity.y *= 0.95
+        } else {
+          entity.velocity.y = 0 // Stop vertical movement completely when grounded
+        }
       }
       
       attempts++
@@ -953,9 +937,10 @@ export class PhysicsEngine {
     // If we still couldn't resolve after max attempts, apply emergency push
     if (attempts >= maxAttempts) {
       // Push entity upward as last resort (common escape direction)
-      entity.position.y -= 5
-      entity.velocity.x *= 0.5
-      entity.velocity.y *= 0.5
+      entity.position.y -= 2 // Smaller emergency push
+      entity.velocity.x *= 0.8 // Less aggressive velocity reduction
+      entity.velocity.y = 0 // Stop vertical movement
+      entity.grounded = false // Reset grounded state to re-detect ground
     }
   }
 
@@ -979,7 +964,7 @@ export class PhysicsEngine {
         minEscapeDistance = distance
         const normal = this.getSegmentNormal(segment, entityCenter)
         const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
-        const pushDistance = entityRadius - distance + 0.5 // Small buffer
+        const pushDistance = entityRadius - distance + 0.01 // Much smaller buffer to reduce jitter
         
         escapeVector = {
           x: normal.x * pushDistance,
