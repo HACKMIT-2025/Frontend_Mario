@@ -237,10 +237,6 @@ export class PhysicsEngine {
 
       // Handle horizontal collision (walls)
       if (horizontalCollision) {
-        // Calculate entity's mass center
-        const entityCenterY = entityBox.y + entityBox.height / 2
-        const platformCenterY = platformBox.y + platformBox.height / 2
-
         if (comingFromLeft) {
           entity.position.x = platformBox.x - entity.width - 0.01 // Smaller buffer
           entity.wallCollision.right = true
@@ -256,10 +252,6 @@ export class PhysicsEngine {
 
       // Handle vertical collision (floor/ceiling)
       if (verticalCollision) {
-        // Calculate entity's mass center
-        const entityCenterX = entityBox.x + entityBox.width / 2
-        const platformCenterX = platformBox.x + platformBox.width / 2
-
         if (comingFromTop) {
           entity.position.y = platformBox.y - entity.height
           entity.grounded = true
@@ -275,11 +267,6 @@ export class PhysicsEngine {
 
       // If neither horizontal nor vertical collision is clear, use the old method as fallback
       if (!horizontalCollision && !verticalCollision) {
-        const entityCenterY = entityBox.y + entityBox.height / 2
-        const platformCenterY = platformBox.y + platformBox.height / 2
-        const entityCenterX = entityBox.x + entityBox.width / 2
-        const platformCenterX = platformBox.x + platformBox.width / 2
-
         if (overlapX < overlapY) {
           // Horizontal collision
           if (entityBox.x < platformBox.x) {
@@ -308,12 +295,7 @@ export class PhysicsEngine {
         }
       }
     } else {
-      // For regular platforms, apply elastic collision logic as well
-      const entityCenterY = entityBox.y + entityBox.height / 2
-      const platformCenterY = platformBox.y + platformBox.height / 2
-      const entityCenterX = entityBox.x + entityBox.width / 2
-      const platformCenterX = platformBox.x + platformBox.width / 2
-
+      // For regular platforms
       if (overlapX < overlapY) {
         // Horizontal collision
         if (entityBox.x < platformBox.x) {
