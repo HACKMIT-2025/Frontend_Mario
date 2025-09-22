@@ -227,12 +227,11 @@ GameAPI.generateFromImageData(imageData)
 // Get the dialog generator
 const dialogGenerator = gameAPI.getEngine().getDialogGenerator();
 
-// Configure with your API key
-// Put key in env variable VITE_OPENROUTER_API_KEY
-dialogGenerator.configureOpenRouter(import.meta.env.VITE_OPENROUTER_API_KEY);
+// Configure backend API for AI dialog generation
+dialogGenerator.configureBackend();
 
 // Test the connection (optional)
-const isConnected = await dialogGenerator.testOpenRouterConnection();
+const isConnected = await dialogGenerator.testBackendConnection();
 console.log('AI system ready:', isConnected);
 
 // Enable AI (after configuration)

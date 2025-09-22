@@ -1,5 +1,5 @@
 import { DialogManager } from './DialogManager'
-import { OpenRouterClient } from '../api/OpenRouterClient'
+import { BackendClient } from '../api/BackendClient'
 
 export interface DialogQuote {
   failure: string[]
@@ -10,7 +10,7 @@ export interface DialogQuote {
 
 export class DialogGenerator {
   private dialogManager: DialogManager
-  private openRouterClient: OpenRouterClient | null = null
+  private backendClient: BackendClient | null = null
   private useAI = false
   private lastAIQuote = ''
 
@@ -56,34 +56,43 @@ export class DialogGenerator {
     this.dialogManager = dialogManager
   }
 
-  // Configure OpenRouter API
-  public configureOpenRouter(apiKey: string): void {
-    if (apiKey && apiKey.trim()) {
-      this.openRouterClient = new OpenRouterClient(apiKey.trim())
-      this.useAI = true
-      console.log('OpenRouter AI teasing system configured successfully!')
-    } else {
-      console.warn('Invalid OpenRouter API key provided')
+  // Configure Backend API
+  public configureBackend(): void {
+    try {
+      this.backendClient = new BackendClient()
+      // Test backend connection
+      this.backendClient.isBackendAvailable().then(isAvailable => {
+        if (isAvailable) {
+          this.useAI = true
+          console.log('🤖 AI teasing system enabled via backend')
+        } else {
+          console.warn('⚠️ Backend not available, using fallback quotes')
+        }
+      }).catch(() => {
+        console.warn('⚠️ Backend connection failed, using fallback quotes')
+      })
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize backend client, using fallback quotes')
     }
   }
 
-  // Test OpenRouter connection
-  public async testOpenRouterConnection(): Promise<boolean> {
-    if (!this.openRouterClient) {
-      console.warn('OpenRouter client not configured')
+  // Test Backend connection
+  public async testBackendConnection(): Promise<boolean> {
+    if (!this.backendClient) {
+      console.warn('Backend client not configured')
       return false
     }
 
     try {
-      const isConnected = await this.openRouterClient.testConnection()
+      const isConnected = await this.backendClient.isBackendAvailable()
       if (isConnected) {
-        console.log('OpenRouter connection test successful!')
+        console.log('Backend connection test successful!')
       } else {
-        console.warn('OpenRouter connection test failed')
+        console.warn('Backend connection test failed')
       }
       return isConnected
     } catch (error) {
-      console.error('OpenRouter connection test error:', error)
+      console.error('Backend connection test error:', error)
       return false
     }
   }
@@ -91,13 +100,13 @@ export class DialogGenerator {
   // Disable AI and use fallback quotes
   public disableAI(): void {
     this.useAI = false
-    this.openRouterClient = null
+    this.backendClient = null
     console.log('AI teasing system disabled, using fallback quotes')
   }
 
   // Enable AI (requires configured API key)
   public enableAI(): boolean {
-    if (this.openRouterClient) {
+    if (this.backendClient) {
       this.useAI = true
       console.log('AI teasing system enabled')
       return true
@@ -161,7 +170,7 @@ export class DialogGenerator {
     this.dialogManager.setLastQuoteType(quoteType)
 
     // Try AI-generated quote first if enabled
-    if (this.useAI && this.openRouterClient) {
+    if (this.useAI && this.backendClient) {
       try {
         const gameContext = {
           numDeaths,
@@ -172,7 +181,7 @@ export class DialogGenerator {
           lastQuoteType: quoteType
         }
 
-        const aiQuote = await this.openRouterClient.generateTeasingQuote(gameContext)
+        const aiQuote = await this.backendClient.generateTeasingQuote(gameContext)
         if (aiQuote && aiQuote.trim()) {
           this.lastAIQuote = aiQuote
           console.log('Generated AI teasing quote:', aiQuote)
@@ -205,19 +214,18 @@ export class DialogGenerator {
   public async generateVictoryQuote(
     numDeaths: number,
     timeElapsed: number,
-    coins: number
+    _coins: number
   ): Promise<string | null> {
     // Try AI-generated quote first if enabled
-    if (this.useAI && this.openRouterClient) {
+    if (this.useAI && this.backendClient) {
       try {
         const gameContext = {
-          numDeaths,
+          totalDeaths: numDeaths,
           timeElapsed,
-          coins,
-          isVictory: true
+          completionPercentage: 100
         }
 
-        const aiQuote = await this.openRouterClient.generateVictoryQuote(gameContext)
+        const aiQuote = await this.backendClient.generateVictoryMessage(gameContext)
         if (aiQuote && aiQuote.trim()) {
           this.lastAIQuote = aiQuote
           console.log('Generated AI victory quote:', aiQuote)

@@ -23,10 +23,10 @@ export interface LevelData {
 }
 
 export class LevelLoader {
-  private static apiBaseUrl = 'YOUR_API_URL' // 将被替换为实际的API地址
+  private static apiBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://25hackmit--hackmit25-backend.modal.run' // Use backend API
 
   /**
-   * 从URL获取levelId
+   * Get levelId from URL
    */
   static getLevelId(): string | null {
     const urlParams = new URLSearchParams(window.location.search)
@@ -34,7 +34,7 @@ export class LevelLoader {
   }
 
   /**
-   * 检测当前页面模式
+   * Detect current page mode
    */
   static getPageMode(): 'main' | 'play' | 'embed' {
     const pathname = window.location.pathname
@@ -44,7 +44,7 @@ export class LevelLoader {
   }
 
   /**
-   * 从API获取地图数据
+   * Get map data from API
    */
   static async fetchLevelData(levelId: string, apiUrl?: string): Promise<LevelData> {
     const baseUrl = apiUrl || this.apiBaseUrl
@@ -52,7 +52,7 @@ export class LevelLoader {
     try {
       console.log(`🌐 Fetching level data for ID: ${levelId}`)
 
-      const response = await fetch(`${baseUrl}/api/levels/${levelId}`, {
+      const response = await fetch(`${baseUrl}/api/mario/level/${levelId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -71,13 +71,13 @@ export class LevelLoader {
     } catch (error) {
       console.error('❌ Failed to fetch level data:', error)
 
-      // 返回默认关卡数据作为fallback
+      // Return default level data as fallback
       return this.getDefaultLevelData()
     }
   }
 
   /**
-   * 从URL参数直接加载压缩的数据（备用方案）
+   * Load compressed data directly from URL parameters (fallback method)
    */
   static loadFromURL(): LevelData | null {
     const urlParams = new URLSearchParams(window.location.search)
@@ -86,8 +86,8 @@ export class LevelLoader {
     if (!data) return null
 
     try {
-      // 如果需要解压缩，这里可以添加解压逻辑
-      const decompressed = atob(data) // 简单base64解码
+      // Add decompression logic here if needed
+      const decompressed = atob(data) // Simple base64 decoding
       const levelData = JSON.parse(decompressed)
 
       console.log('📋 Level data loaded from URL:', levelData)
@@ -99,7 +99,7 @@ export class LevelLoader {
   }
 
   /**
-   * 验证和规范化地图数据
+   * Validate and normalize map data
    */
   static validateLevelData(data: any): LevelData {
     const validated: LevelData = {
@@ -108,7 +108,7 @@ export class LevelLoader {
       rigid_bodies: []
     }
 
-    // 验证起始点
+    // Validate starting points
     if (data.starting_points && Array.isArray(data.starting_points)) {
       validated.starting_points = data.starting_points
         .filter((point: any) => point.coordinates && Array.isArray(point.coordinates))
@@ -122,7 +122,7 @@ export class LevelLoader {
       console.log('🎯 Processed starting points:', validated.starting_points)
     }
 
-    // 验证终点
+    // Validate end points
     if (data.end_points && Array.isArray(data.end_points)) {
       validated.end_points = data.end_points
         .filter((point: any) => point.coordinates && Array.isArray(point.coordinates))
@@ -136,7 +136,7 @@ export class LevelLoader {
       console.log('🏁 Processed end points:', validated.end_points)
     }
 
-    // 验证刚体（墙壁和平台）
+    // Validate rigid bodies (walls and platforms)
     if (data.rigid_bodies && Array.isArray(data.rigid_bodies)) {
       console.log('🔷 Processing rigid bodies:', data.rigid_bodies.length, 'found')
 
@@ -150,12 +150,12 @@ export class LevelLoader {
               Math.max(0, Math.min(576, point[1]))
             ] as [number, number])
         }))
-        .filter((body: any) => body.contour_points.length >= 3) // 至少3个点才能形成多边形
+        .filter((body: any) => body.contour_points.length >= 3) // At least 3 points to form a polygon
 
       console.log('🔷 Processed rigid bodies:', validated.rigid_bodies.length, 'valid polygons')
     }
 
-    // 验证金币（可选）
+    // Validate coins (optional)
     if (data.coins && Array.isArray(data.coins)) {
       validated.coins = data.coins
         .filter((coin: any) => {
@@ -181,7 +181,7 @@ export class LevelLoader {
       console.log('🪙 Processed coins:', validated.coins?.length || 0, 'found')
     }
 
-    // 验证钉刺（可选，学习本地引擎逻辑）
+    // Validate spikes (optional, learn from local engine logic)
     if (data.spikes && Array.isArray(data.spikes)) {
       validated.spikes = data.spikes
         .filter((spike: any) => {
@@ -201,7 +201,7 @@ export class LevelLoader {
       console.log('🔺 Processed spikes:', validated.spikes?.length || 0, 'found')
     }
 
-    // 验证敌人（可选）
+    // Validate enemies (optional)
     if (data.enemies && Array.isArray(data.enemies)) {
       validated.enemies = data.enemies
         .filter((enemy: any) => typeof enemy.x === 'number' && typeof enemy.y === 'number')
@@ -217,7 +217,7 @@ export class LevelLoader {
   }
 
   /**
-   * 获取默认关卡数据（fallback）
+   * Get default level data (fallback)
    */
   static getDefaultLevelData(): LevelData {
     return {
@@ -225,7 +225,7 @@ export class LevelLoader {
       end_points: [{ coordinates: [900, 400] }],
       rigid_bodies: [
         {
-          // 地面
+          // Ground
           contour_points: [
             [0, 550],
             [1024, 550],
@@ -234,7 +234,7 @@ export class LevelLoader {
           ]
         },
         {
-          // 测试平台
+          // Test platform
           contour_points: [
             [300, 450],
             [400, 450],
@@ -251,15 +251,15 @@ export class LevelLoader {
   }
 
   /**
-   * 设置API基础URL（用于配置）
+   * Set API base URL (for configuration)
    */
   static setApiBaseUrl(url: string) {
-    this.apiBaseUrl = url.replace(/\/$/, '') // 移除末尾斜杠
+    this.apiBaseUrl = url.replace(/\/$/, '') // Remove trailing slash
     console.log(`🔧 API base URL set to: ${this.apiBaseUrl}`)
   }
 
   /**
-   * 从JSON URL直接加载关卡数据
+   * Load level data directly from JSON URL
    */
   static async loadFromJSONUrl(jsonUrl: string): Promise<LevelData> {
     try {
@@ -291,7 +291,7 @@ export class LevelLoader {
   }
 
   /**
-   * 主加载函数 - 自动选择最佳加载方式
+   * Main loading function - automatically select best loading method
    */
   static async loadLevelData(apiUrl?: string): Promise<LevelData> {
     const urlParams = new URLSearchParams(window.location.search)
@@ -299,7 +299,7 @@ export class LevelLoader {
     console.log('🔍 Checking URL params:', window.location.search)
     console.log('🔍 Available params:', Array.from(urlParams.entries()))
 
-    // 1. 优先尝试从JSON URL直接加载（新功能）
+    // 1. Priority: try loading directly from JSON URL (new feature)
     const jsonUrl = urlParams.get('json')
     if (jsonUrl) {
       console.log(`🌐 Found JSON URL parameter: ${jsonUrl}`)
@@ -315,7 +315,7 @@ export class LevelLoader {
       console.log('❌ No JSON URL parameter found')
     }
 
-    // 2. 尝试从API获取levelId
+    // 2. Try to get levelId from API
     const levelId = this.getLevelId()
     if (levelId) {
       console.log(`🆔 Found level ID: ${levelId}`)
@@ -331,7 +331,7 @@ export class LevelLoader {
       console.log('❌ No level ID found')
     }
 
-    // 3. 尝试从URL参数直接加载Base64数据
+    // 3. Try to load Base64 data directly from URL parameters
     const urlData = this.loadFromURL()
     if (urlData) {
       console.log('✅ Successfully loaded from URL data')
@@ -340,7 +340,7 @@ export class LevelLoader {
       console.log('❌ No URL data found')
     }
 
-    // 4. 最后使用默认数据
+    // 4. Finally use default data
     console.log('📋 Using default level data (fallback)')
     return this.getDefaultLevelData()
   }

@@ -199,29 +199,25 @@ async function configureAIDialogSystem(gameAPI: GameAPI) {
     // 获取对话生成器
     const dialogGenerator = gameAPI.getEngine().getDialogGenerator()
 
-    // 配置OpenRouter API密钥
-    if (import.meta.env.VITE_OPENROUTER_API_KEY) {
-      dialogGenerator.configureOpenRouter(import.meta.env.VITE_OPENROUTER_API_KEY)
+    // 配置Backend API用于对话生成
+    dialogGenerator.configureBackend()
 
-      // 测试连接
-      const isConnected = await dialogGenerator.testOpenRouterConnection()
-      console.log('🌐 AI system ready:', isConnected)
+    // 测试连接
+    const isConnected = await dialogGenerator.testBackendConnection()
+    console.log('🌐 Backend system ready:', isConnected)
 
-      // 启用AI
-      const success = dialogGenerator.enableAI()
-      console.log('🤖 AI enabled:', success)
+    // 启用AI
+    const success = dialogGenerator.enableAI()
+    console.log('🤖 AI enabled:', success)
 
-      // 检查AI是否启用
-      const isAIEnabled = dialogGenerator.isAIEnabled()
-      console.log('🔍 Is AI enabled?', isAIEnabled)
+    // 检查AI是否启用
+    const isAIEnabled = dialogGenerator.isAIEnabled()
+    console.log('🔍 Is AI enabled?', isAIEnabled)
 
-      if (isAIEnabled) {
-        console.log('✅ AI dialog system configured successfully')
-      } else {
-        console.warn('⚠️ AI system failed to enable')
-      }
+    if (isAIEnabled) {
+      console.log('✅ AI dialog system configured successfully via backend')
     } else {
-      console.warn('⚠️ VITE_OPENROUTER_API_KEY not found, AI dialog system disabled')
+      console.warn('⚠️ AI system failed to enable')
     }
   } catch (error) {
     console.error('❌ Error configuring AI dialog system:', error)
