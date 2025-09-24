@@ -1,5 +1,6 @@
 import './style.css'
 import { GameAPI } from './engine'
+import { MobileDetector } from './utils/MobileDetector'
 
 // Default level data (embedded to avoid deployment issues)
 const levelData = {
@@ -111,14 +112,21 @@ if (endPoint) {
   scaledEndY = endY - 30
 }
 
-// Initialize game API with error handling
+// Get mobile detector instance for responsive configuration
+const mobileDetector = MobileDetector.getInstance()
+const deviceType = mobileDetector.getDeviceType()
+const recommendedSize = mobileDetector.getRecommendedCanvasSize()
+
+console.log('Device detected:', deviceType, 'Recommended canvas size:', recommendedSize)
+
+// Initialize game API with responsive configuration
 let gameAPI: GameAPI
 try {
   gameAPI = new GameAPI('game-canvas', {
-    width: 1024,
-    height: 576,
+    width: recommendedSize.width,
+    height: recommendedSize.height,
     gravity: 0.5,
-    fps: 60,
+    fps: deviceType === 'mobile' ? 50 : 60, // Slightly lower FPS on mobile for better performance
     goal_x: endPoint ? scaledEndX : undefined,
     goal_y: endPoint ? scaledEndY : undefined,
     start_x: startX,
@@ -189,6 +197,10 @@ console.log(`
 Mario Game Engine API
 ===================================
 
+Device Type: ${deviceType}
+Canvas Size: ${recommendedSize.width}x${recommendedSize.height}
+Virtual Controls: ${mobileDetector.shouldShowVirtualControls ? 'Enabled' : 'Disabled'}
+
 The GameAPI is now available globally. Use it in the console:
 
 // Build a level
@@ -210,6 +222,11 @@ GameAPI.generateRandomLevel()
 // Game control
 GameAPI.pauseGame()
 GameAPI.resetGame()
+
+// Mobile-specific controls (available on all devices)
+GameAPI.getEngine().getInputManager().showVirtualGamepad()
+GameAPI.getEngine().getInputManager().hideVirtualGamepad()
+GameAPI.getEngine().getInputManager().toggleVirtualGamepad()
 
 // Helper methods
 GameAPI.addCoinRow(x, y, count)

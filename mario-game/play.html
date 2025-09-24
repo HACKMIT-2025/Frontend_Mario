@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Mario Game - Play</title>
     <style>
       /* 完整游戏页面样式 */
@@ -19,6 +22,13 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         font-family: 'Arial', sans-serif;
         overflow-x: hidden;
+        /* 移动设备优化 */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
       }
 
       .header {
@@ -88,9 +98,10 @@
 
       #game-container {
         position: relative;
-        width: 1024px;
-        height: 576px;
-        max-width: 95vw;
+        width: 100%;
+        max-width: 1200px;
+        height: auto;
+        aspect-ratio: 16/9;
         max-height: calc(100vh - 200px);
         background: #000;
         border-radius: 10px;
@@ -162,6 +173,90 @@
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+
+      /* 移动设备优化 */
+      .mobile-controls {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1001;
+        display: none;
+      }
+
+      .mobile-btn {
+        display: block;
+        margin-bottom: 5px;
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+        min-width: 100px;
+      }
+
+      .mobile-btn:hover {
+        background: rgba(0,0,0,0.9);
+      }
+
+      @media screen and (max-width: 768px) {
+        .header {
+          padding: 8px 12px;
+        }
+
+        .header h1 {
+          font-size: 18px;
+        }
+
+        .header-actions {
+          gap: 5px;
+        }
+
+        .btn {
+          padding: 6px 10px;
+          font-size: 12px;
+        }
+
+        .game-section {
+          padding: 10px;
+        }
+
+        #game-container {
+          max-height: calc(100vh - 160px);
+          border: 2px solid #333;
+          border-radius: 6px;
+        }
+
+        .mobile-controls {
+          display: block;
+        }
+
+        #game-ui {
+          top: 8px;
+          left: 8px;
+          font-size: 12px;
+          padding: 6px 10px;
+        }
+      }
+
+      @media screen and (orientation: landscape) and (max-height: 500px) {
+        .header {
+          padding: 4px 8px;
+        }
+
+        .header h1 {
+          font-size: 16px;
+        }
+
+        .game-section {
+          padding: 5px;
+        }
+
+        #game-container {
+          max-height: calc(100vh - 100px);
+        }
+      }
     </style>
   </head>
   <body>
@@ -175,6 +270,13 @@
           <button class="btn danger" onclick="goHome()">🏠 Home</button>
         </div>
       </header>
+
+      <!-- 移动控制 -->
+      <div class="mobile-controls">
+        <button class="mobile-btn" onclick="toggleVirtualGamepad()">🎮 Controls</button>
+        <button class="mobile-btn" onclick="toggleVibration()">📳 Vibration</button>
+        <button class="mobile-btn" onclick="showHelp()">❓ Help</button>
+      </div>
 
       <!-- Game Area -->
       <main class="game-section">
@@ -222,6 +324,34 @@
           window.location.href = '/'
         }
       }
+
+      // 移动设备支持函数
+      function toggleVirtualGamepad() {
+        if (window.MarioGameAPI && window.MarioGameAPI.getEngine) {
+          const inputManager = window.MarioGameAPI.getEngine().getInputManager()
+          if (inputManager) {
+            inputManager.toggleVirtualGamepad()
+          }
+        }
+      }
+
+      function toggleVibration() {
+        if (window.MarioGameAPI && window.MarioGameAPI.getEngine) {
+          const inputManager = window.MarioGameAPI.getEngine().getInputManager()
+          if (inputManager) {
+            window.vibrationEnabled = !window.vibrationEnabled
+            inputManager.setVibrationEnabled(window.vibrationEnabled)
+            alert(window.vibrationEnabled ? 'Vibration ON' : 'Vibration OFF')
+          }
+        }
+      }
+
+      function showHelp() {
+        alert('🎮 Controls:\n\n⬅️➡️ Arrow Keys - Move\n⬆️ Space - Jump\n⚡ Shift - Run\n📱 Touch the virtual buttons on mobile devices')
+      }
+
+      // 初始化震动状态
+      window.vibrationEnabled = true
 
       console.log('🎮 Mario Game - Play Mode Initialized')
     </script>

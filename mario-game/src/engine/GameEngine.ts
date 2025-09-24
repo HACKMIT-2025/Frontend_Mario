@@ -11,6 +11,7 @@ import { Entity } from './entities/Entity'
 import { SpriteLoader } from './sprites/SpriteLoader'
 import { DialogManager } from './ui/DialogManager'
 import { DialogGenerator } from './ui/DialogGenerator'
+import { MobileDetector } from '../utils/MobileDetector'
 
 export interface GameConfig {
   width?: number
@@ -52,6 +53,7 @@ export class GameEngine {
   private goal_y
   private start_x
   private start_y
+  private mobileDetector: MobileDetector
   // @ts-ignore - Used for external API compatibility
   private levelData: LevelData | null = null
   private spritesInitialized = false
@@ -79,6 +81,7 @@ export class GameEngine {
     this.spriteLoader = SpriteLoader.getInstance()
     this.dialogManager = new DialogManager()
     this.dialogGenerator = new DialogGenerator(this.dialogManager)
+    this.mobileDetector = MobileDetector.getInstance()
 
     this.fps = config.fps || 60
     this.frameInterval = 1000 / this.fps
@@ -88,8 +91,75 @@ export class GameEngine {
     this.start_x = config.start_x
     this.start_y = config.start_y
 
+    // Configure mobile-specific settings
+    this.configureMobileOptimizations()
+
     // Setup default demo level
     // this.setupDemoLevel()
+  }
+
+  /**
+   * Configure mobile-specific optimizations
+   */
+  private configureMobileOptimizations() {
+    // 总是调整画布尺寸以适应设备
+    this.adjustCanvasSize()
+    
+    // 如果是触摸设备，启用虚拟控制器
+    if (this.mobileDetector.shouldShowVirtualControls) {
+      console.log('Configuring mobile optimizations for device:', this.mobileDetector.getDeviceType())
+      
+      // Enable virtual gamepad
+      if (this.inputManager) {
+        setTimeout(() => {
+          this.inputManager.showVirtualGamepad()
+        }, 100)
+      }
+    }
+    
+    // 监听窗口大小变化
+    this.setupResizeListener()
+  }
+  
+  /**
+   * 调整画布尺寸以充分利用屏幕空间
+   */
+  private adjustCanvasSize() {
+    const recommendedSize = this.mobileDetector.getRecommendedCanvasSize()
+    
+    // 设置画布尺寸
+    this.canvas.width = recommendedSize.width
+    this.canvas.height = recommendedSize.height
+    
+    // 更新渲染器和摄像机
+    this.renderer = new Renderer(this.ctx, this.canvas.width, this.canvas.height)
+    this.camera = new Camera(this.canvas.width, this.canvas.height)
+    
+    console.log(`Canvas size adjusted to: ${this.canvas.width}x${this.canvas.height}`)
+  }
+  
+  /**
+   * 设置窗口大小变化监听器
+   */
+  private setupResizeListener() {
+    let resizeTimeout: number
+    
+    window.addEventListener('resize', () => {
+      // 防抖处理，避免频繁调整
+      clearTimeout(resizeTimeout)
+      resizeTimeout = window.setTimeout(() => {
+        console.log('Window resized, adjusting canvas...')
+        this.adjustCanvasSize()
+      }, 250)
+    })
+    
+    // 监听设备方向变化
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        console.log('Orientation changed, adjusting canvas...')
+        this.adjustCanvasSize()
+      }, 500) // 等待方向变化完成
+    })
   }
 
   public loadLevel(level: Level) {
@@ -147,6 +217,14 @@ export class GameEngine {
 
   public getEntityManager() {
     return this.entityManager
+  }
+
+  public getInputManager() {
+    return this.inputManager
+  }
+
+  public getMobileDetector() {
+    return this.mobileDetector
   }
 
   public pause() {

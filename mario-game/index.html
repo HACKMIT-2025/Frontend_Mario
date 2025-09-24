@@ -3,10 +3,54 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Mario Game</title>
+    <style>
+      /* 移动设备优化 */
+      * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #5C94FC;
+      }
+      
+      #mobile-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 1000;
+        display: none;
+      }
+      
+      @media screen and (max-width: 768px) {
+        #mobile-info {
+          display: block;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="mobile-info">
+      📱 Mobile Mode Active<br>
+      Tap 🎮 to toggle controls
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

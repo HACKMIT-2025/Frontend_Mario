@@ -1,3 +1,6 @@
+import { VirtualGamepad } from '../../input/VirtualGamepad'
+import { MobileDetector } from '../../utils/MobileDetector'
+
 export interface InputState {
   left: boolean
   right: boolean
@@ -10,7 +13,7 @@ export interface InputState {
 
 export class InputManager {
   private keys: Map<string, boolean> = new Map()
-  private touches: Map<number, { x: number; y: number }> = new Map()
+  private touches: Map<number, { x: number; y: number; startTime: number }> = new Map()
   private inputState: InputState = {
     left: false,
     right: false,
@@ -20,10 +23,15 @@ export class InputManager {
     run: false,
     action: false
   }
+  private virtualGamepad: VirtualGamepad | null = null
+  private mobileDetector: MobileDetector
+  private touchGestureEnabled: boolean = true
 
   constructor() {
+    this.mobileDetector = MobileDetector.getInstance()
     this.initializeKeyboardListeners()
     this.initializeTouchListeners()
+    this.initializeVirtualGamepad()
   }
 
   private initializeKeyboardListeners() {
@@ -49,33 +57,64 @@ export class InputManager {
     })
   }
 
+  /**
+   * 初始化虚拟游戏手柄
+   */
+  private initializeVirtualGamepad() {
+    this.virtualGamepad = new VirtualGamepad((key: string, pressed: boolean) => {
+      this.keys.set(key, pressed)
+      this.updateInputState()
+    })
+    
+    // 创建虚拟游戏手柄
+    this.virtualGamepad.create()
+  }
+
   private initializeTouchListeners() {
     const canvas = document.getElementById('game-canvas')
     if (!canvas) return
 
+    // 改进的触摸事件处理
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault()
       Array.from(e.touches).forEach(touch => {
-        this.touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY })
+        this.touches.set(touch.identifier, { 
+          x: touch.clientX, 
+          y: touch.clientY,
+          startTime: Date.now()
+        })
       })
-      this.updateTouchInput()
-    })
+      if (this.touchGestureEnabled) {
+        this.updateTouchInput()
+      }
+    }, { passive: false })
 
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault()
       Array.from(e.touches).forEach(touch => {
-        this.touches.set(touch.identifier, { x: touch.clientX, y: touch.clientY })
+        const existingTouch = this.touches.get(touch.identifier)
+        if (existingTouch) {
+          this.touches.set(touch.identifier, {
+            x: touch.clientX, 
+            y: touch.clientY,
+            startTime: existingTouch.startTime
+          })
+        }
       })
-      this.updateTouchInput()
-    })
+      if (this.touchGestureEnabled) {
+        this.updateTouchInput()
+      }
+    }, { passive: false })
 
     canvas.addEventListener('touchend', (e) => {
       e.preventDefault()
       Array.from(e.changedTouches).forEach(touch => {
         this.touches.delete(touch.identifier)
       })
-      this.updateTouchInput()
-    })
+      if (this.touchGestureEnabled) {
+        this.updateTouchInput()
+      }
+    }, { passive: false })
   }
 
   private updateInputState() {
@@ -90,7 +129,15 @@ export class InputManager {
   }
 
   private updateTouchInput() {
-    // Reset touch input
+    // 只有在没有虚拟游戏手柄显示或禁用触摸手势时才处理画布触摸
+    if ((this.virtualGamepad && this.virtualGamepad.isEnabled()) || !this.touchGestureEnabled) {
+      return
+    }
+
+    // Reset touch input for direct touch
+    const wasJump = this.inputState.jump
+    const wasRun = this.inputState.run
+    
     this.inputState.left = false
     this.inputState.right = false
     this.inputState.jump = false
@@ -107,23 +154,36 @@ export class InputManager {
       const x = touch.x - rect.left
       const y = touch.y - rect.top
 
-      // Left side of screen for movement
-      if (x < canvasWidth / 2) {
-        if (x < canvasWidth / 4) {
+      // 改进的触摸区域划分
+      // 左侧三分之一：移动控制
+      if (x < canvasWidth / 3) {
+        if (x < canvasWidth / 6) {
           this.inputState.left = true
         } else {
           this.inputState.right = true
         }
       }
-      // Right side for jump
-      else {
+      // 右侧三分之一：动作按键
+      else if (x > canvasWidth * 2 / 3) {
         if (y < canvasHeight / 2) {
           this.inputState.jump = true
         } else {
           this.inputState.run = true
         }
       }
+      // 中间区域：跳跃（适合单手操作）
+      else {
+        this.inputState.jump = true
+      }
     })
+
+    // 触觉反馈
+    if (this.mobileDetector.supportsVibration) {
+      if ((this.inputState.jump && !wasJump) || 
+          (this.inputState.run && !wasRun)) {
+        this.mobileDetector.vibrate(50)
+      }
+    }
   }
 
   private resetInputState() {
@@ -152,80 +212,80 @@ export class InputManager {
     this.resetInputState()
   }
 
-  // Virtual gamepad for mobile
-  public createVirtualGamepad() {
-    const gamepadHTML = `
-      <div id="virtual-gamepad" style="position: fixed; bottom: 20px; left: 0; right: 0; z-index: 1000; display: none;">
-        <div style="position: absolute; left: 20px; bottom: 20px;">
-          <button class="gamepad-btn" id="btn-left" style="position: absolute; left: 0; top: 30px;">◀</button>
-          <button class="gamepad-btn" id="btn-right" style="position: absolute; left: 60px; top: 30px;">▶</button>
-          <button class="gamepad-btn" id="btn-up" style="position: absolute; left: 30px; top: 0;">▲</button>
-          <button class="gamepad-btn" id="btn-down" style="position: absolute; left: 30px; top: 60px;">▼</button>
-        </div>
-        <div style="position: absolute; right: 20px; bottom: 20px;">
-          <button class="gamepad-btn" id="btn-jump" style="position: absolute; right: 60px; bottom: 30px;">A</button>
-          <button class="gamepad-btn" id="btn-action" style="position: absolute; right: 0; bottom: 30px;">B</button>
-        </div>
-      </div>
-    `
-
-    const style = document.createElement('style')
-    style.textContent = `
-      .gamepad-btn {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.7);
-        border: 2px solid #333;
-        font-size: 20px;
-        font-weight: bold;
-        touch-action: none;
-        user-select: none;
-      }
-      .gamepad-btn:active {
-        background: rgba(255, 255, 255, 0.9);
-      }
-      @media (max-width: 768px) {
-        #virtual-gamepad {
-          display: block !important;
-        }
-      }
-    `
-    document.head.appendChild(style)
-
-    const container = document.createElement('div')
-    container.innerHTML = gamepadHTML
-    document.body.appendChild(container.firstElementChild!)
-
-    // Add touch event listeners to buttons
-    this.initializeVirtualButtons()
+  /**
+   * 获取虚拟游戏手柄实例
+   */
+  public getVirtualGamepad(): VirtualGamepad | null {
+    return this.virtualGamepad
   }
 
-  private initializeVirtualButtons() {
-    const buttons = [
-      { id: 'btn-left', key: 'ArrowLeft' },
-      { id: 'btn-right', key: 'ArrowRight' },
-      { id: 'btn-up', key: 'ArrowUp' },
-      { id: 'btn-down', key: 'ArrowDown' },
-      { id: 'btn-jump', key: 'Space' },
-      { id: 'btn-action', key: 'KeyX' }
-    ]
+  /**
+   * 显示虚拟游戏手柄
+   */
+  public showVirtualGamepad(): void {
+    if (this.virtualGamepad) {
+      this.virtualGamepad.show()
+      this.touchGestureEnabled = false // 禁用直接触摸手势
+    }
+  }
 
-    buttons.forEach(btn => {
-      const element = document.getElementById(btn.id)
-      if (element) {
-        element.addEventListener('touchstart', (e) => {
-          e.preventDefault()
-          this.keys.set(btn.key, true)
-          this.updateInputState()
-        })
+  /**
+   * 隐藏虚拟游戏手柄
+   */
+  public hideVirtualGamepad(): void {
+    if (this.virtualGamepad) {
+      this.virtualGamepad.hide()
+      this.touchGestureEnabled = true // 启用直接触摸手势
+    }
+  }
 
-        element.addEventListener('touchend', (e) => {
-          e.preventDefault()
-          this.keys.set(btn.key, false)
-          this.updateInputState()
-        })
-      }
-    })
+  /**
+   * 切换虚拟游戏手柄显示状态
+   */
+  public toggleVirtualGamepad(): void {
+    if (this.virtualGamepad) {
+      this.virtualGamepad.toggle()
+      this.touchGestureEnabled = !this.virtualGamepad.isEnabled()
+    }
+  }
+
+  /**
+   * 检查是否为移动设备
+   */
+  public isMobileDevice(): boolean {
+    return this.mobileDetector.shouldShowVirtualControls
+  }
+
+  /**
+   * 设置震动功能启用状态
+   */
+  public setVibrationEnabled(enabled: boolean): void {
+    if (this.virtualGamepad) {
+      this.virtualGamepad.setVibrationEnabled(enabled)
+    }
+  }
+
+  /**
+   * 销毁输入管理器
+   */
+  public destroy(): void {
+    if (this.virtualGamepad) {
+      this.virtualGamepad.destroy()
+      this.virtualGamepad = null
+    }
+    this.keys.clear()
+    this.touches.clear()
+    this.resetInputState()
+  }
+
+  /**
+   * 向后兼容的虚拟游戏手柄创建方法
+   * @deprecated 使用新的VirtualGamepad类替代
+   */
+  public createVirtualGamepad() {
+    console.warn('createVirtualGamepad() is deprecated. Virtual gamepad is automatically created.')
+    if (this.virtualGamepad) {
+      this.virtualGamepad.show()
+    }
   }
 }

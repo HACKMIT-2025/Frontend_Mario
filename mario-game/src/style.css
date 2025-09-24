@@ -10,6 +10,13 @@ body {
   overflow: hidden;
   background: #5C94FC;
   font-family: 'Courier New', monospace;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Prevent zoom on double tap */
+  touch-action: manipulation;
 }
 
 #app {
@@ -18,18 +25,35 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  /* Mobile viewport fixes */
+  position: relative;
+  padding: 5px;
+  box-sizing: border-box;
 }
 
 #game-container {
   position: relative;
   background: #000;
   box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  border-radius: 8px;
+  overflow: hidden;
+  /* 确保游戏容器能够充分利用屏幕空间 */
+  width: 100%;
+  height: auto;
+  max-width: 100vw;
+  max-height: calc(100vh - 10px);
+  /* 防止容器超出视口 */
+  box-sizing: border-box;
 }
 
 #game-canvas {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  /* 确保画布完全填充容器并保持比例 */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 #game-ui {
@@ -53,4 +77,143 @@ body {
   padding: 5px 10px;
   border-radius: 5px;
   display: inline-block;
+}
+
+/* Mobile device optimizations */
+@media screen and (max-width: 768px) {
+  body {
+    /* Full screen on mobile */
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+  
+  #app {
+    /* 为虚拟游戏手柄预留空间，同时确保游戏区域最大化 */
+    padding: 2px 2px 190px 2px;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  
+  #game-container {
+    /* 移动设备上的优化 */
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    border-radius: 4px;
+    /* 确保容器在移动设备上充分利用屏幕空间 */
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  #game-ui {
+    /* 移动设备上的UI调整 */
+    font-size: 14px;
+    top: 2px;
+    left: 2px;
+    z-index: 11;
+  }
+  
+  #game-ui div {
+    margin-bottom: 3px;
+  }
+  
+  .num_deaths, .elapsed_time, .coins {
+    font-size: 12px;
+    padding: 2px 6px;
+  }
+}
+
+/* Tablet optimizations */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  #app {
+    padding: 5px 5px 210px 5px;
+  }
+  
+  #game-container {
+    /* 平板设备上最大化游戏区域 */
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  #game-ui {
+    font-size: 16px;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  #app {
+    /* 横屏时优化空间利用 */
+    padding: 2px 2px 130px 2px;
+    height: 100vh;
+  }
+  
+  #game-container {
+    /* 横屏时最大化游戏区域 */
+    width: 100%;
+    height: auto;
+    margin: 0;
+  }
+  
+  #game-ui {
+    font-size: 12px;
+    top: 1px;
+    left: 1px;
+  }
+  
+  .num_deaths, .elapsed_time, .coins {
+    font-size: 10px;
+    padding: 1px 4px;
+    margin-bottom: 1px;
+  }
+}
+
+/* Desktop optimizations */
+@media screen and (min-width: 1025px) {
+  #app {
+    padding: 10px;
+  }
+  
+  #game-container {
+    /* 桌面版本保持合理的最大尺寸 */
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+}
+
+/* High DPI screen adjustments */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #game-canvas {
+    /* Better rendering on retina displays */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+  }
+}
+
+/* Prevent text selection and context menus on game elements */
+#game-container, #game-canvas, #game-ui {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Loading state styles */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+
+/* Mobile-specific loading adjustments */
+@media screen and (max-width: 768px) {
+  .loading {
+    font-size: 16px;
+    padding: 20px;
+  }
 }
