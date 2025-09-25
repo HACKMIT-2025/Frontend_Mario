@@ -88,57 +88,16 @@ export class MobileDetector {
 
   /**
    * 获取推荐的游戏画布尺寸
-   * 新策略：横向铺满屏幕，高度根据宽高比适配
+   * 回滚到标准固定尺寸：1024x576
    */
   public getRecommendedCanvasSize(): { width: number; height: number } {
-    const screenWidth = window.innerWidth
-    const screenHeight = window.innerHeight
-    const gameAspectRatio = 16 / 9 // Mario游戏的理想宽高比
-    
-    let canvasWidth: number
-    let canvasHeight: number
-    
-    if (this._isMobile) {
-      // 手机：横向铺满屏幕，为虚拟控制器留出空间
-      canvasWidth = screenWidth - 10 // 留出少量边距
-      
-      // 根据设备方向调整高度
-      if (screenWidth > screenHeight) {
-        // 横屏模式：更多空间给游戏
-        canvasHeight = Math.min(screenHeight - 140, canvasWidth / gameAspectRatio)
-      } else {
-        // 竖屏模式：为虚拟控制器留出足够空间
-        canvasHeight = Math.min(screenHeight - 200, canvasWidth / gameAspectRatio)
-      }
-      
-      // 确保最小尺寸
-      canvasHeight = Math.max(canvasHeight, 300)
-      
-    } else if (this._isTablet) {
-      // 平板：横向铺满，保持良好的宽高比
-      canvasWidth = screenWidth - 20
-      canvasHeight = Math.min(screenHeight - 180, canvasWidth / gameAspectRatio)
-      canvasHeight = Math.max(canvasHeight, 400)
-      
-    } else {
-      // 桌面：可以更大，但保持合理的最大值
-      canvasWidth = Math.min(screenWidth - 40, 1200)
-      canvasHeight = Math.min(screenHeight - 100, canvasWidth / gameAspectRatio)
-      
-      // 确保桌面版本不会太小
-      canvasWidth = Math.max(canvasWidth, 800)
-      canvasHeight = Math.max(canvasHeight, 450)
-    }
-    
-    // 最终调整：确保高度不会超出屏幕
-    if (canvasHeight > screenHeight - 50) {
-      canvasHeight = screenHeight - 50
-      canvasWidth = canvasHeight * gameAspectRatio
-    }
+    // 使用固定的标准游戏尺寸，避免地图缩放问题
+    const standardWidth = 1024
+    const standardHeight = 576
     
     return { 
-      width: Math.round(canvasWidth), 
-      height: Math.round(canvasHeight) 
+      width: standardWidth, 
+      height: standardHeight 
     }
   }
 
