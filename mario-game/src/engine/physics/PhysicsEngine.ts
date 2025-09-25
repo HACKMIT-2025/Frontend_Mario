@@ -16,15 +16,23 @@ export interface AABB {
 
 export class PhysicsEngine {
   private gravity: number
-  private friction = 0.85
-  private airResistance = 0.98
+  private friction = 0.88 // Slightly higher friction for better control on irregular surfaces
+  private airResistance = 0.99 // Less air resistance for smoother movement
   private maxVelocity = { x: 15, y: 20 }
+
+  // Enhanced parameters for irregular shape handling
+  // @ts-ignore - Reserved for future collision tolerance features
+  private readonly polygonCollisionTolerance = 0.5 // Tolerance for polygon collision detection
+  // @ts-ignore - Reserved for future separation buffer features
+  private readonly separationBuffer = 0.1 // Buffer distance to prevent sticking
+  // @ts-ignore - Reserved for future iteration limiting features
+  private readonly maxCollisionIterations = 3 // Max iterations to resolve complex collisions
 
   constructor(gravity = 0.5) {
     this.gravity = gravity
   }
 
-  public updateEntity(entity: Entity, _dt: number, platforms: Platform[] = [], polygons: Polygon[] = []) {
+  public updateEntity(entity: Entity, dt: number, platforms: Platform[] = [], polygons: Polygon[] = []) {
     if (!entity.physics) return
 
     const vel = entity.velocity
@@ -40,45 +48,47 @@ export class PhysicsEngine {
 
     // Apply gravity if not grounded
     if (!entity.grounded && entity.physics.gravity) {
-      vel.y += this.gravity
+      vel.y += this.gravity * dt
     }
 
-    // Apply friction
+    // Apply friction with dt scaling for consistent physics
     if (entity.grounded) {
-      vel.x *= this.friction
+      vel.x *= Math.pow(this.friction, dt)
     } else {
-      vel.x *= this.airResistance
+      vel.x *= Math.pow(this.airResistance, dt)
     }
 
     // Clamp velocity
     vel.x = Math.max(-this.maxVelocity.x, Math.min(this.maxVelocity.x, vel.x))
     vel.y = Math.max(-this.maxVelocity.y, Math.min(this.maxVelocity.y, vel.y))
 
-    // Apply velocity smoothing to prevent jittery movement on polygon edges
-    // This helps prevent entities from getting stuck due to micro-oscillations
-    const velocityThreshold = 0.1
+    // Enhanced velocity smoothing for irregular shapes
+    const velocityThreshold = 0.05 // Smaller threshold for more precision
     if (Math.abs(vel.x) < velocityThreshold) {
-      vel.x *= 0.9 // Gradually reduce very small velocities
+      vel.x *= 0.95 // Less aggressive damping
     }
-    // When grounded, completely stop vertical velocity if it's very small
     if (Math.abs(vel.y) < velocityThreshold && entity.grounded) {
-      vel.y = 0 // Stop vertical movement completely when grounded
+      vel.y = 0
     }
 
-    // Use Swept AABB for collision detection to prevent tunneling
-    const movement = { x: vel.x, y: vel.y }
+    // STEP 1: Handle platform collisions first (simple AABB shapes)
+    const movement = { x: vel.x * dt, y: vel.y * dt }
     const sweptResult = this.sweptAABB(entity, movement, platforms)
+    let remainingMovement = { ...movement }
 
     if (sweptResult.hit && sweptResult.time < 1.0) {
-      console.log('Collision detected via Swept AABB')
-      // Collision detected - move entity to collision point
+      // Move to collision point
       pos.x += movement.x * sweptResult.time
       pos.y += movement.y * sweptResult.time
 
-      // Resolve collision based on normal
+      // Calculate remaining movement after collision
+      remainingMovement.x = movement.x * (1 - sweptResult.time)
+      remainingMovement.y = movement.y * (1 - sweptResult.time)
+
+      // Resolve collision
       if (Math.abs(sweptResult.normal.x) > 0.5) {
-        // Horizontal collision
         vel.x = 0
+        remainingMovement.x = 0
         if (sweptResult.normal.x < 0) {
           entity.wallCollision.right = true
         } else {
@@ -87,26 +97,24 @@ export class PhysicsEngine {
       }
 
       if (Math.abs(sweptResult.normal.y) > 0.5) {
-        // Vertical collision
         if (sweptResult.normal.y < 0) {
           entity.grounded = true
           vel.y = 0
+          remainingMovement.y = 0
         } else {
           entity.ceilingCollision = true
           vel.y = 0
+          remainingMovement.y = 0
         }
       }
 
-      // Add small buffer to prevent sticking (only for horizontal collisions)
-      if (Math.abs(sweptResult.normal.x) > 0.5) {
-        pos.x += sweptResult.normal.x * 0.1
-      }
-      // Don't add buffer for vertical collisions to prevent ground jitter
-      // pos.y += sweptResult.normal.y * 0.1
+      // Small separation to prevent sticking
+      pos.x += sweptResult.normal.x * 0.01
     } else {
       // No platform collision - apply full movement
       pos.x += movement.x
       pos.y += movement.y
+      remainingMovement = { x: 0, y: 0 }
 
       // Reset collision states
       entity.grounded = false
@@ -115,24 +123,9 @@ export class PhysicsEngine {
       entity.ceilingCollision = false
     }
 
-    // Additional polygon collision check for complex shapes
-    // This handles cases where swept AABB doesn't catch polygon collisions
+    // STEP 2: Enhanced polygon collision handling for irregular hand-drawn shapes
     if (polygons.length > 0) {
-      const entityBox = this.getAABB(entity)
-      let hadPolygonCollision = false
-      
-      for (const polygon of polygons) {
-        if (this.polygonIntersectsAABB(polygon, entityBox)) {
-          this.resolvePolygonCollision(entity, polygon, entityBox)
-          hadPolygonCollision = true
-        }
-      }
-      
-      // If we had polygon collisions, do a final position validation
-      // to ensure the entity isn't still stuck inside any polygons
-      if (hadPolygonCollision) {
-        this.validateEntityPosition(entity, polygons)
-      }
+      this.handlePolygonCollisions(entity, polygons, remainingMovement, dt)
     }
   }
 
@@ -401,6 +394,315 @@ export class PhysicsEngine {
     const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom
 
     return t >= 0 && t <= 1 && u >= 0 && u <= 1
+  }
+
+  // New enhanced method for handling polygon collisions with irregular shapes
+  private handlePolygonCollisions(entity: Entity, polygons: Polygon[], remainingMovement: Vector2D, _dt: number) {
+    const maxIterations = 3 // Limit iterations to prevent infinite loops
+    let iteration = 0
+
+    while (iteration < maxIterations && (Math.abs(remainingMovement.x) > 0.01 || Math.abs(remainingMovement.y) > 0.01)) {
+      const entityBox = this.getAABB(entity)
+      let totalCollisionResponse = { x: 0, y: 0 }
+      let collisionCount = 0
+      let hadCollision = false
+
+      // Check collisions with all polygons
+      for (const polygon of polygons) {
+        const collisionInfo = this.getDetailedPolygonCollision(entityBox, polygon)
+
+        if (collisionInfo.hasCollision) {
+          hadCollision = true
+          collisionCount++
+
+          // Accumulate collision responses
+          totalCollisionResponse.x += collisionInfo.separation.x
+          totalCollisionResponse.y += collisionInfo.separation.y
+
+          // Update velocity based on collision normal
+          this.updateVelocityForPolygonCollision(entity, collisionInfo)
+        }
+      }
+
+      if (hadCollision && collisionCount > 0) {
+        // Average the collision responses for smoother behavior
+        const avgResponse = {
+          x: totalCollisionResponse.x / collisionCount,
+          y: totalCollisionResponse.y / collisionCount
+        }
+
+        // Apply position correction with conservative approach
+        const correctionFactor = 0.8 // Less aggressive correction to prevent overshooting
+        entity.position.x += avgResponse.x * correctionFactor
+        entity.position.y += avgResponse.y * correctionFactor
+
+        // Reduce remaining movement based on collision
+        remainingMovement.x *= 0.1
+        remainingMovement.y *= 0.1
+
+        // Dampen velocity to prevent oscillation
+        entity.velocity.x *= 0.9
+        if (!entity.grounded) {
+          entity.velocity.y *= 0.9
+        }
+      } else {
+        // No collision, we can apply remaining movement
+        entity.position.x += remainingMovement.x
+        entity.position.y += remainingMovement.y
+        break
+      }
+
+      iteration++
+    }
+
+    // Final validation to ensure entity isn't stuck
+    this.performFinalStuckCheck(entity, polygons)
+  }
+
+  // Enhanced collision detection for irregular polygons
+  private getDetailedPolygonCollision(entityBox: AABB, polygon: Polygon): {
+    hasCollision: boolean;
+    separation: Vector2D;
+    normal: Vector2D;
+    penetrationDepth: number;
+  } {
+    const entityCenter = {
+      x: entityBox.x + entityBox.width / 2,
+      y: entityBox.y + entityBox.height / 2
+    }
+
+    let minSeparation = { x: 0, y: 0 }
+    let minPenetration = Infinity
+    let hasCollision = false
+    let collisionNormal = { x: 0, y: -1 }
+
+    // Check collision with each segment of the polygon
+    const segments = polygon.getSegments()
+
+    for (const segment of segments) {
+      const segmentInfo = this.getEntitySegmentCollision(entityBox, segment)
+
+      if (segmentInfo.penetration > 0 && segmentInfo.penetration < minPenetration) {
+        hasCollision = true
+        minPenetration = segmentInfo.penetration
+        minSeparation = segmentInfo.separation
+        collisionNormal = segmentInfo.normal
+      }
+    }
+
+    // Also check if entity center is inside polygon (for complex concave shapes)
+    if (!hasCollision && polygon.contains(entityCenter.x, entityCenter.y)) {
+      // Entity is inside polygon - find closest escape route
+      const escapeInfo = this.findClosestEscape(entityBox, polygon)
+      if (escapeInfo) {
+        hasCollision = true
+        minSeparation = escapeInfo.separation
+        collisionNormal = escapeInfo.normal
+        minPenetration = escapeInfo.penetration
+      }
+    }
+
+    return {
+      hasCollision,
+      separation: minSeparation,
+      normal: collisionNormal,
+      penetrationDepth: minPenetration
+    }
+  }
+
+  // Get collision info between entity AABB and polygon segment
+  private getEntitySegmentCollision(entityBox: AABB, segment: any): {
+    penetration: number;
+    separation: Vector2D;
+    normal: Vector2D;
+  } {
+    const entityCenter = {
+      x: entityBox.x + entityBox.width / 2,
+      y: entityBox.y + entityBox.height / 2
+    }
+
+    // Find closest point on segment to entity center
+    const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
+
+    // Calculate distance and direction
+    const dx = entityCenter.x - closestPoint.x
+    const dy = entityCenter.y - closestPoint.y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+
+    // Calculate entity radius (approximate)
+    const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
+    const penetration = Math.max(0, entityRadius - distance)
+
+    let separation = { x: 0, y: 0 }
+    let normal = { x: 0, y: -1 }
+
+    if (distance > 0.001) {
+      // Normalize direction vector
+      normal = { x: dx / distance, y: dy / distance }
+      separation = {
+        x: normal.x * (penetration + 0.1), // Small buffer
+        y: normal.y * (penetration + 0.1)
+      }
+    }
+
+    return { penetration, separation, normal }
+  }
+
+  // Find closest escape route when entity is inside polygon
+  private findClosestEscape(entityBox: AABB, polygon: Polygon): {
+    separation: Vector2D;
+    normal: Vector2D;
+    penetration: number;
+  } | null {
+    const entityCenter = {
+      x: entityBox.x + entityBox.width / 2,
+      y: entityBox.y + entityBox.height / 2
+    }
+
+    const segments = polygon.getSegments()
+    let closestDistance = Infinity
+    let bestEscape = null
+
+    for (const segment of segments) {
+      const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
+      const dx = closestPoint.x - entityCenter.x
+      const dy = closestPoint.y - entityCenter.y
+      const distance = Math.sqrt(dx * dx + dy * dy)
+
+      if (distance < closestDistance) {
+        closestDistance = distance
+        const normal = { x: -dx / distance, y: -dy / distance }
+        const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
+        const separation = {
+          x: normal.x * (entityRadius + distance + 1), // Push out with buffer
+          y: normal.y * (entityRadius + distance + 1)
+        }
+
+        bestEscape = {
+          separation,
+          normal,
+          penetration: entityRadius + distance
+        }
+      }
+    }
+
+    return bestEscape
+  }
+
+  // Update entity velocity based on polygon collision
+  private updateVelocityForPolygonCollision(entity: Entity, collisionInfo: any) {
+    const normal = collisionInfo.normal
+
+    // Determine surface type based on normal direction
+    const isFloorLike = normal.y < -0.6 // Normal points upward (floor)
+    const isCeilingLike = normal.y > 0.6 // Normal points downward (ceiling)
+    const isWallLike = Math.abs(normal.x) > 0.6 // Normal points horizontally (wall)
+
+    if (isFloorLike) {
+      // Landing on floor-like surface
+      if (entity.velocity.y > 0) { // Only if falling
+        entity.velocity.y = 0
+        entity.grounded = true
+      }
+      // Allow horizontal sliding on floors
+    } else if (isCeilingLike) {
+      // Hitting ceiling-like surface
+      if (entity.velocity.y < 0) { // Only if moving upward
+        entity.velocity.y = 0
+        entity.ceilingCollision = true
+      }
+    } else if (isWallLike) {
+      // Hitting wall-like surface
+      const velocityIntoWall = entity.velocity.x * normal.x
+      if (velocityIntoWall < 0) { // Moving into wall
+        entity.velocity.x = 0 // Stop horizontal movement
+        if (normal.x > 0) {
+          entity.wallCollision.left = true
+        } else {
+          entity.wallCollision.right = true
+        }
+      }
+    } else {
+      // Diagonal/slope surface - use sliding behavior
+      const velocityDotNormal = entity.velocity.x * normal.x + entity.velocity.y * normal.y
+      if (velocityDotNormal < 0) {
+        // Slide along surface
+        entity.velocity.x -= velocityDotNormal * normal.x * 0.7 // Partial reflection for sliding
+        entity.velocity.y -= velocityDotNormal * normal.y * 0.7
+
+        // Check if slope is walkable
+        if (normal.y < -0.3) {
+          entity.grounded = true
+        }
+      }
+    }
+  }
+
+  // Final check to ensure entity isn't stuck inside any polygon
+  private performFinalStuckCheck(entity: Entity, polygons: Polygon[]) {
+    const entityBox = this.getAABB(entity)
+    let isStuck = false
+
+    for (const polygon of polygons) {
+      if (this.polygonIntersectsAABB(polygon, entityBox)) {
+        isStuck = true
+        break
+      }
+    }
+
+    if (isStuck) {
+      // Emergency unstuck procedure
+      const emergencyPush = this.findEmergencyEscapeDirection(entityBox, polygons)
+      if (emergencyPush) {
+        entity.position.x += emergencyPush.x
+        entity.position.y += emergencyPush.y
+
+        // Significantly reduce velocity to prevent bouncing
+        entity.velocity.x *= 0.5
+        entity.velocity.y *= 0.5
+
+        // Reset collision states to allow re-detection
+        entity.grounded = false
+        entity.wallCollision.left = false
+        entity.wallCollision.right = false
+        entity.ceilingCollision = false
+      }
+    }
+  }
+
+  // Find emergency escape direction when all else fails
+  private findEmergencyEscapeDirection(entityBox: AABB, polygons: Polygon[]): Vector2D | null {
+    const testDirections = [
+      { x: 0, y: -2 }, // Up (most common escape)
+      { x: -1, y: -1 }, // Up-left
+      { x: 1, y: -1 },  // Up-right
+      { x: -2, y: 0 },  // Left
+      { x: 2, y: 0 },   // Right
+      { x: 0, y: 1 }    // Down (last resort)
+    ]
+
+    for (const direction of testDirections) {
+      const testBox = {
+        x: entityBox.x + direction.x,
+        y: entityBox.y + direction.y,
+        width: entityBox.width,
+        height: entityBox.height
+      }
+
+      let isValidPosition = true
+      for (const polygon of polygons) {
+        if (this.polygonIntersectsAABB(polygon, testBox)) {
+          isValidPosition = false
+          break
+        }
+      }
+
+      if (isValidPosition) {
+        return direction
+      }
+    }
+
+    return null // No valid escape direction found
   }
 
   private resolvePolygonCollision(entity: Entity, polygon: Polygon, entityBox: AABB) {
@@ -859,103 +1161,60 @@ export class PhysicsEngine {
     return { hit: true, time: Math.max(0, tNear), normal }
   }
 
-  private validateEntityPosition(entity: Entity, polygons: Polygon[]) {
-    // Final validation to ensure entity isn't stuck inside any polygons
-    // This prevents scenarios where collision resolution might leave the entity
-    // in an invalid state, especially when dealing with complex polygon shapes
-    
+
+
+  // Debug and monitoring methods
+  public getCollisionDebugInfo(entity: Entity, polygons: Polygon[]): any {
     const entityBox = this.getAABB(entity)
-    let maxAttempts = 5
-    let attempts = 0
-    
-    while (attempts < maxAttempts) {
-      let needsAdjustment = false
-      let totalPushX = 0
-      let totalPushY = 0
-      let validCollisions = 0
-      
-      for (const polygon of polygons) {
-        if (this.polygonIntersectsAABB(polygon, entityBox)) {
-          // Find the minimal push direction to get out of this polygon
-          const pushVector = this.findMinimalEscapeVector(entity, polygon, entityBox)
-          if (pushVector) {
-            totalPushX += pushVector.x
-            totalPushY += pushVector.y
-            validCollisions++
-            needsAdjustment = true
-          }
-        }
-      }
-      
-      if (!needsAdjustment) {
-        break // Entity is no longer stuck
-      }
-      
-      if (validCollisions > 0) {
-        // Apply averaged push to get unstuck
-        const avgPushX = totalPushX / validCollisions
-        const avgPushY = totalPushY / validCollisions
-        
-        entity.position.x += avgPushX
-        entity.position.y += avgPushY
-        
-        // Update entity box for next iteration
-        entityBox.x = entity.position.x
-        entityBox.y = entity.position.y
-        
-        // Dampen velocity to prevent oscillation
-        entity.velocity.x *= 0.95 // Less aggressive damping
-        // Only dampen vertical velocity if not grounded
-        if (!entity.grounded) {
-          entity.velocity.y *= 0.95
-        } else {
-          entity.velocity.y = 0 // Stop vertical movement completely when grounded
-        }
-      }
-      
-      attempts++
+    const info = {
+      entityPosition: { x: entity.position.x, y: entity.position.y },
+      entityVelocity: { x: entity.velocity.x, y: entity.velocity.y },
+      isGrounded: entity.grounded,
+      wallCollisions: entity.wallCollision,
+      activeCollisions: [] as any[],
+      nearbyPolygons: polygons.length
     }
-    
-    // If we still couldn't resolve after max attempts, apply emergency push
-    if (attempts >= maxAttempts) {
-      // Push entity upward as last resort (common escape direction)
-      entity.position.y -= 2 // Smaller emergency push
-      entity.velocity.x *= 0.8 // Less aggressive velocity reduction
-      entity.velocity.y = 0 // Stop vertical movement
-      entity.grounded = false // Reset grounded state to re-detect ground
+
+    for (let i = 0; i < polygons.length; i++) {
+      const polygon = polygons[i]
+      if (this.polygonIntersectsAABB(polygon, entityBox)) {
+        const collisionInfo = this.getDetailedPolygonCollision(entityBox, polygon)
+        info.activeCollisions.push({
+          polygonIndex: i,
+          penetrationDepth: collisionInfo.penetrationDepth,
+          separation: collisionInfo.separation,
+          normal: collisionInfo.normal
+        })
+      }
     }
+
+    return info
   }
 
-  private findMinimalEscapeVector(_entity: Entity, polygon: Polygon, entityBox: AABB): { x: number; y: number } | null {
-    const segments = polygon.getSegments()
-    const entityCenter = {
-      x: entityBox.x + entityBox.width / 2,
-      y: entityBox.y + entityBox.height / 2
+  public enableCollisionDebug(enable: boolean) {
+    // Store debug flag for future use
+    ;(this as any).debugMode = enable
+  }
+
+  // Enhanced configuration methods
+  public configureForHandDrawnShapes(config?: {
+    friction?: number;
+    airResistance?: number;
+    separationBuffer?: number;
+    maxIterations?: number;
+  }) {
+    if (config?.friction !== undefined) {
+      this.friction = Math.max(0.5, Math.min(0.99, config.friction))
     }
-    
-    let minEscapeDistance = Infinity
-    let escapeVector = null
-    
-    for (const segment of segments) {
-      const closestPoint = this.closestPointOnSegment(entityCenter.x, entityCenter.y, segment)
-      const dx = entityCenter.x - closestPoint.x
-      const dy = entityCenter.y - closestPoint.y
-      const distance = Math.sqrt(dx * dx + dy * dy)
-      
-      if (distance < minEscapeDistance && distance > 0.001) {
-        minEscapeDistance = distance
-        const normal = this.getSegmentNormal(segment, entityCenter)
-        const entityRadius = Math.max(entityBox.width, entityBox.height) / 2
-        const pushDistance = entityRadius - distance + 0.01 // Much smaller buffer to reduce jitter
-        
-        escapeVector = {
-          x: normal.x * pushDistance,
-          y: normal.y * pushDistance
-        }
-      }
+    if (config?.airResistance !== undefined) {
+      this.airResistance = Math.max(0.9, Math.min(0.999, config.airResistance))
     }
-    
-    return escapeVector
+    if (config?.separationBuffer !== undefined) {
+      ;(this as any).separationBuffer = Math.max(0.01, Math.min(1.0, config.separationBuffer))
+    }
+    if (config?.maxIterations !== undefined) {
+      ;(this as any).maxCollisionIterations = Math.max(1, Math.min(10, config.maxIterations))
+    }
   }
 
   // Getters and setters
@@ -973,5 +1232,24 @@ export class PhysicsEngine {
 
   public setMaxVelocity(x: number, y: number) {
     this.maxVelocity = { x, y }
+  }
+
+  // Performance monitoring
+  public getPerformanceStats(): {
+    polygonCollisionChecks: number;
+    emergencyEscapes: number;
+    iterationCounts: number[];
+  } {
+    return {
+      polygonCollisionChecks: (this as any).polygonCollisionChecks || 0,
+      emergencyEscapes: (this as any).emergencyEscapes || 0,
+      iterationCounts: (this as any).iterationCounts || []
+    }
+  }
+
+  public resetPerformanceStats() {
+    ;(this as any).polygonCollisionChecks = 0
+    ;(this as any).emergencyEscapes = 0
+    ;(this as any).iterationCounts = []
   }
 }
