@@ -119,6 +119,37 @@ const recommendedSize = mobileDetector.getRecommendedCanvasSize()
 
 console.log('Device detected:', deviceType, 'Recommended canvas size:', recommendedSize)
 
+// 缩放地图数据以匹配新的画布尺寸
+import { MapScaler } from './utils/MapScaler'
+
+// 使用MapScaler缩放地图数据
+const mapScaler = MapScaler.createStandardScaler(recommendedSize.width, recommendedSize.height)
+if (mapScaler.needsScaling()) {
+  console.log('🔍 Scaling embedded level data to match canvas size')
+  const scaledLevelData = mapScaler.scaleLevelData(levelData)
+  
+  // 更新缩放后的起始点和终点
+  if (scaledLevelData.starting_points && scaledLevelData.starting_points[0]) {
+    const [newStartX, newStartY] = scaledLevelData.starting_points[0].coordinates
+    startX = newStartX
+    startY = newStartY
+    console.log('🏃 Scaled player start position:', `(${startX}, ${startY})`)
+  }
+  
+  if (scaledLevelData.end_points && scaledLevelData.end_points[0]) {
+    const [newEndX, newEndY] = scaledLevelData.end_points[0].coordinates
+    scaledEndX = newEndX
+    scaledEndY = newEndY - 30 // 调整为适合的高度
+    console.log('🏁 Scaled goal position:', `(${scaledEndX}, ${scaledEndY})`)
+  }
+  
+  // 用缩放后的数据替换原始数据
+  Object.assign(levelData, scaledLevelData)
+  mapScaler.logScalingInfo()
+} else {
+  console.log('📏 No map scaling needed for canvas size')
+}
+
 // Initialize game API with responsive configuration
 let gameAPI: GameAPI
 try {

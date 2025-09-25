@@ -34,7 +34,26 @@ async function initializeEmbedGame() {
 
     // 加载关卡数据
     console.log('📋 Loading level data...')
-    const levelData = await LevelLoader.loadLevelData(window.MARIO_API_URL)
+    
+    // 创建游戏API实例先获取画布尺寸
+    const tempCanvas = document.getElementById('game-canvas') as HTMLCanvasElement
+    const tempGameAPI = new GameAPI(tempCanvas, {
+      width: 1024,
+      height: 576,
+      gravity: 0.5,
+      fps: 60
+    })
+    
+    // 获取实际画布尺寸
+    const canvasSize = {
+      width: tempGameAPI.getCanvas().width,
+      height: tempGameAPI.getCanvas().height
+    }
+    
+    console.log('📏 Canvas size for map scaling:', canvasSize)
+    
+    // 使用实际画布尺寸加载并缩放地图数据
+    const levelData = await LevelLoader.loadLevelData(window.MARIO_API_URL, canvasSize)
 
     // 提取起始点和终点用于引擎配置
     let startX = 100, startY = 400
@@ -52,10 +71,10 @@ async function initializeEmbedGame() {
       goalY = endPoint.coordinates[1] - 30
     }
 
-    // 创建游戏API实例，包含目标配置和优化的物理设置
+    // 重新创建游戏API实例，使用正确的目标配置
     gameAPI = new GameAPI('game-canvas', {
-      width: 1024,
-      height: 576,
+      width: canvasSize.width,
+      height: canvasSize.height,
       gravity: 0.5,        // Balanced gravity for good gameplay
       fps: 60,             // Smooth 60fps
       goal_x: goalX,

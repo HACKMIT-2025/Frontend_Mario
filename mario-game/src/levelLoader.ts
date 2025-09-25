@@ -1,3 +1,5 @@
+import { MapScaler } from './utils/MapScaler'
+
 export interface LevelData {
   starting_points: Array<{
     coordinates: [number, number]
@@ -20,6 +22,15 @@ export interface LevelData {
   spikes?: Array<{
     coordinates: [number, number]
   }>
+  // 添加缩放相关的元数据
+  originalCanvasSize?: {
+    width: number
+    height: number
+  }
+  targetCanvasSize?: {
+    width: number
+    height: number
+  }
 }
 
 export class LevelLoader {
@@ -101,7 +112,7 @@ export class LevelLoader {
   /**
    * Validate and normalize map data
    */
-  static validateLevelData(data: any): LevelData {
+  static validateLevelData(data: any, maxWidth: number = 1024, maxHeight: number = 576): LevelData {
     const validated: LevelData = {
       starting_points: [],
       end_points: [],
@@ -114,8 +125,8 @@ export class LevelLoader {
         .filter((point: any) => point.coordinates && Array.isArray(point.coordinates))
         .map((point: any) => ({
           coordinates: [
-            Math.max(0, Math.min(1024, point.coordinates[0])),
-            Math.max(0, Math.min(576, point.coordinates[1]))
+            Math.max(0, Math.min(maxWidth, point.coordinates[0])),
+            Math.max(0, Math.min(maxHeight, point.coordinates[1]))
           ] as [number, number]
         }))
 
@@ -128,8 +139,8 @@ export class LevelLoader {
         .filter((point: any) => point.coordinates && Array.isArray(point.coordinates))
         .map((point: any) => ({
           coordinates: [
-            Math.max(0, Math.min(1024, point.coordinates[0])),
-            Math.max(0, Math.min(576, point.coordinates[1]))
+            Math.max(0, Math.min(maxWidth, point.coordinates[0])),
+            Math.max(0, Math.min(maxHeight, point.coordinates[1]))
           ] as [number, number]
         }))
 
@@ -146,8 +157,8 @@ export class LevelLoader {
           contour_points: body.contour_points
             .filter((point: any) => Array.isArray(point) && point.length >= 2)
             .map((point: any) => [
-              Math.max(0, Math.min(1024, point[0])),
-              Math.max(0, Math.min(576, point[1]))
+              Math.max(0, Math.min(maxWidth, point[0])),
+              Math.max(0, Math.min(maxHeight, point[1]))
             ] as [number, number])
         }))
         .filter((body: any) => body.contour_points.length >= 3) // At least 3 points to form a polygon
@@ -173,8 +184,8 @@ export class LevelLoader {
             y = coin.y
           }
           return {
-            x: Math.max(0, Math.min(1024, x)),
-            y: Math.max(0, Math.min(576, y))
+            x: Math.max(0, Math.min(maxWidth, x)),
+            y: Math.max(0, Math.min(maxHeight, y))
           }
         })
 
@@ -192,8 +203,8 @@ export class LevelLoader {
           const [x, y] = spike.coordinates
           return {
             coordinates: [
-              Math.max(0, Math.min(1024, x)),
-              Math.max(0, Math.min(576, y))
+              Math.max(0, Math.min(maxWidth, x)),
+              Math.max(0, Math.min(maxHeight, y))
             ] as [number, number]
           }
         })
@@ -206,8 +217,8 @@ export class LevelLoader {
       validated.enemies = data.enemies
         .filter((enemy: any) => typeof enemy.x === 'number' && typeof enemy.y === 'number')
         .map((enemy: any) => ({
-          x: Math.max(0, Math.min(1024, enemy.x)),
-          y: Math.max(0, Math.min(576, enemy.y)),
+          x: Math.max(0, Math.min(maxWidth, enemy.x)),
+          y: Math.max(0, Math.min(maxHeight, enemy.y)),
           type: enemy.type || 'goomba'
         }))
     }
@@ -291,9 +302,35 @@ export class LevelLoader {
   }
 
   /**
+   * Scale level data to match target canvas size
+   */
+  static scaleLevelDataToCanvas(levelData: LevelData, targetWidth: number, targetHeight: number): LevelData {
+    // 创建地图缩放器 - 假设原始数据基于1024x576
+    const scaler = MapScaler.createStandardScaler(targetWidth, targetHeight)
+    
+    if (!scaler.needsScaling()) {
+      console.log('📏 No map scaling needed for canvas size:', `${targetWidth}x${targetHeight}`)
+      return levelData
+    }
+    
+    console.log('🔍 Scaling map data from 1024x576 to:', `${targetWidth}x${targetHeight}`)
+    
+    // 缩放所有地图数据
+    const scaledData = scaler.scaleLevelData(levelData)
+    
+    // 添加缩放元数据
+    scaledData.originalCanvasSize = { width: 1024, height: 576 }
+    scaledData.targetCanvasSize = { width: targetWidth, height: targetHeight }
+    
+    scaler.logScalingInfo()
+    
+    return scaledData
+  }
+
+  /**
    * Main loading function - automatically select best loading method
    */
-  static async loadLevelData(apiUrl?: string): Promise<LevelData> {
+  static async loadLevelData(apiUrl?: string, targetCanvasSize?: { width: number, height: number }): Promise<LevelData> {
     const urlParams = new URLSearchParams(window.location.search)
 
     console.log('🔍 Checking URL params:', window.location.search)
@@ -306,6 +343,11 @@ export class LevelLoader {
       try {
         const result = await this.loadFromJSONUrl(jsonUrl)
         console.log('✅ Successfully loaded from JSON URL')
+        
+        // Apply scaling if target canvas size is specified
+        if (targetCanvasSize && (targetCanvasSize.width !== 1024 || targetCanvasSize.height !== 576)) {
+          return this.scaleLevelDataToCanvas(result, targetCanvasSize.width, targetCanvasSize.height)
+        }
         return result
       } catch (error) {
         console.warn('⚠️ Failed to load from JSON URL:', error)
@@ -322,6 +364,11 @@ export class LevelLoader {
       try {
         const result = await this.fetchLevelData(levelId, apiUrl)
         console.log('✅ Successfully loaded from API')
+        
+        // Apply scaling if target canvas size is specified
+        if (targetCanvasSize && (targetCanvasSize.width !== 1024 || targetCanvasSize.height !== 576)) {
+          return this.scaleLevelDataToCanvas(result, targetCanvasSize.width, targetCanvasSize.height)
+        }
         return result
       } catch (error) {
         console.warn('⚠️ Failed to fetch from API:', error)
@@ -335,6 +382,11 @@ export class LevelLoader {
     const urlData = this.loadFromURL()
     if (urlData) {
       console.log('✅ Successfully loaded from URL data')
+      
+      // Apply scaling if target canvas size is specified
+      if (targetCanvasSize && (targetCanvasSize.width !== 1024 || targetCanvasSize.height !== 576)) {
+        return this.scaleLevelDataToCanvas(urlData, targetCanvasSize.width, targetCanvasSize.height)
+      }
       return urlData
     } else {
       console.log('❌ No URL data found')
@@ -342,6 +394,13 @@ export class LevelLoader {
 
     // 4. Finally use default data
     console.log('📋 Using default level data (fallback)')
-    return this.getDefaultLevelData()
+    const defaultData = this.getDefaultLevelData()
+    
+    // Apply scaling if target canvas size is specified
+    if (targetCanvasSize && (targetCanvasSize.width !== 1024 || targetCanvasSize.height !== 576)) {
+      return this.scaleLevelDataToCanvas(defaultData, targetCanvasSize.width, targetCanvasSize.height)
+    }
+    
+    return defaultData
   }
 }
