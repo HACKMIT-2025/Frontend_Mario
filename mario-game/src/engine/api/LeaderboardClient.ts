@@ -494,8 +494,6 @@ export class LeaderboardManager {
         time: `${(completionTime / 1000).toFixed(3)}秒`,
         rankings: result.rankings
       })
-
-      return result
     } catch (error) {
       console.error('提交成绩失败:', error)
       throw error
