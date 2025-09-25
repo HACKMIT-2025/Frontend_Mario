@@ -29,47 +29,40 @@ export class PhysicsDebugger {
   /**
    * Enable debug mode with console logging
    */
-  enableDebug(physics: PhysicsEngine) {
-    physics.enableCollisionDebug(true)
-    console.log('🔧 Physics Debug Mode Enabled')
+  enableDebug(_physics: PhysicsEngine) {
+    // Note: reverted PhysicsEngine doesn't have enableCollisionDebug method
+    console.log('🔧 Physics Debug Mode Enabled (basic mode)')
     console.log('Use PhysicsDebugger.getInstance() to access debug methods')
   }
 
   /**
    * Configure physics engine specifically for hand-drawn irregular shapes
    */
-  optimizeForHandDrawnShapes(physics: PhysicsEngine) {
-    physics.configureForHandDrawnShapes({
-      friction: 0.88,           // Higher friction for better control
-      airResistance: 0.99,      // Less air resistance for smoother movement
-      separationBuffer: 0.1,    // Small buffer to prevent sticking
-      maxIterations: 3          // Max iterations to resolve collisions
-    })
-
-    console.log('🎨 Physics optimized for hand-drawn shapes')
+  optimizeForHandDrawnShapes(_physics: PhysicsEngine) {
+    // Note: reverted PhysicsEngine doesn't have configureForHandDrawnShapes method
+    // Basic physics engine configuration is handled in the constructor
+    console.log('🎨 Physics optimization requested (reverted engine has basic settings)')
   }
 
   /**
    * Log collision events for analysis
    */
-  logCollision(entity: Entity, polygons: Polygon[], physics: PhysicsEngine) {
-    const debugInfo = physics.getCollisionDebugInfo(entity, polygons)
+  logCollision(entity: Entity, _polygons: Polygon[], _physics: PhysicsEngine) {
+    // Basic collision logging for reverted physics engine
+    const basicInfo = {
+      timestamp: Date.now(),
+      position: { x: entity.position.x, y: entity.position.y },
+      velocity: { x: entity.velocity.x, y: entity.velocity.y },
+      grounded: entity.grounded
+    }
 
-    if (debugInfo.activeCollisions.length > 0) {
-      this.collisionLog.push({
-        timestamp: Date.now(),
-        position: debugInfo.entityPosition,
-        velocity: debugInfo.entityVelocity,
-        collisions: debugInfo.activeCollisions,
-        isStuck: debugInfo.activeCollisions.some((c: any) => c.penetrationDepth > 5)
-      })
+    this.collisionLog.push(basicInfo)
+    this.performanceMetrics.totalCollisions++
 
-      this.performanceMetrics.totalCollisions++
-
-      if (debugInfo.activeCollisions.some((c: any) => c.penetrationDepth > 5)) {
-        this.performanceMetrics.stuckEvents++
-        console.warn('⚠️ Entity appears stuck:', debugInfo)
-      }
+    // Basic stuck detection based on velocity
+    if (Math.abs(entity.velocity.x) < 0.1 && Math.abs(entity.velocity.y) < 0.1 && !entity.grounded) {
+      this.performanceMetrics.stuckEvents++
+      console.warn('⚠️ Entity may be stuck:', basicInfo)
     }
   }
 

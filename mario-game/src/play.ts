@@ -52,12 +52,12 @@ async function initializePlayGame() {
       goalY = endPoint.coordinates[1] - 30
     }
 
-    // 创建游戏API实例，包含目标配置
+    // 创建游戏API实例，包含目标配置和优化的物理设置
     gameAPI = new GameAPI('game-canvas', {
       width: 1024,
       height: 576,
-      gravity: 0.5,
-      fps: 60,
+      gravity: 0.5,        // Balanced gravity for good gameplay
+      fps: 60,             // Smooth 60fps
       goal_x: goalX,
       goal_y: goalY,
       start_x: startX,
@@ -70,6 +70,12 @@ async function initializePlayGame() {
     ;(window as any).MarioGameAPI = gameAPI // 别名兼容
 
     console.log('✅ Game API initialized')
+    
+    // Log physics engine configuration
+    console.log('🔧 Physics Engine Status:')
+    console.log('  - Mode: Play Mode')
+    console.log('  - Engine Version: Reverted (Stable)')
+    console.log('  - Gravity:', gameAPI.getEngine().getPhysicsEngine().getGravity())
 
     // 构建关卡
     await buildGameFromLevelData(levelData)

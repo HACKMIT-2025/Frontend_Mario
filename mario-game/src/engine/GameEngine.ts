@@ -12,7 +12,6 @@ import { SpriteLoader } from './sprites/SpriteLoader'
 import { DialogManager } from './ui/DialogManager'
 import { DialogGenerator } from './ui/DialogGenerator'
 import { MobileDetector } from '../utils/MobileDetector'
-import PhysicsDebugger from './physics/PhysicsDebugger'
 
 export interface GameConfig {
   width?: number
@@ -83,15 +82,8 @@ export class GameEngine {
     this.dialogManager = new DialogManager()
     this.dialogGenerator = new DialogGenerator(this.dialogManager)
 
-    // Optimize physics for hand-drawn irregular shapes
-    const physicsDebugger = PhysicsDebugger.getInstance()
-    physicsDebugger.optimizeForHandDrawnShapes(this.physics)
-
-    // Enable physics debugging in development
-    if (import.meta.env.DEV) {
-      physicsDebugger.enableDebug(this.physics)
-      console.log('🎨 Physics engine optimized for hand-drawn shapes')
-    }
+    // Configure physics engine for optimal performance
+    this.configurePhysicsEngine()
     this.mobileDetector = MobileDetector.getInstance()
 
     this.fps = config.fps || 60
@@ -107,6 +99,19 @@ export class GameEngine {
 
     // Setup default demo level
     // this.setupDemoLevel()
+  }
+
+  /**
+   * Configure physics engine with optimized settings
+   */
+  private configurePhysicsEngine() {
+    // Set optimal physics parameters for both play and embed modes
+    this.physics.setFriction(0.85)  // Good balance for control
+    this.physics.setMaxVelocity(15, 20)  // Reasonable speed limits
+    console.log('🔧 Physics engine configured with optimal settings:')
+    console.log('  - Friction: 0.85')
+    console.log('  - Max velocity: 15x, 20y')
+    console.log('  - Gravity:', this.physics.getGravity())
   }
 
   /**
