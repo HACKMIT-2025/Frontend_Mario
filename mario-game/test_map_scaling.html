@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Map Scaling</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .test-results {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #d32f2f;
+        }
+        .success {
+            color: #2e7d32;
+        }
+        .info {
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Map Scaling Test</h1>
+    <p>此页面用于测试从数据库加载的地图数据的自动缩放功能。</p>
+
+    <div class="test-section">
+        <h2>🎯 测试数据库地图缩放</h2>
+        <p>测试从后端API加载地图数据，并检查是否正确应用了智能缩放。</p>
+        <button class="test-button" onclick="testDatabaseMap()">测试数据库地图 (ID: 1)</button>
+        <button class="test-button" onclick="testDatabaseMap2()">测试数据库地图 (ID: 2)</button>
+        <button class="test-button" onclick="testCanvasDetection()">测试画布检测</button>
+        <button class="test-button" onclick="testScalingWithCanvas()">测试实时缩放</button>
+        <button class="test-button" onclick="testDefaultMap()">测试默认地图</button>
+        <div id="database-results" class="test-results"></div>
+    </div>
+
+    <script type="module">
+        import { LevelLoader } from './src/levelLoader.ts';
+        import { CanvasScaler } from './src/utils/CanvasScaler.ts';
+        
+        window.LevelLoader = LevelLoader;
+        window.CanvasScaler = CanvasScaler;
+        
+        window.testDatabaseMap = async function() {
+            const resultsDiv = document.getElementById('database-results');
+            resultsDiv.innerHTML = '🔄 Testing database map (ID: 1)...\n';
+            
+            try {
+                // 模拟URL参数
+                const originalUrl = window.location.search;
+                const testUrl = '?id=1';
+                history.replaceState({}, '', testUrl);
+                
+                const levelData = await LevelLoader.fetchLevelData('1');
+                
+                resultsDiv.innerHTML += '✅ Map data loaded successfully!\n\n';
+                resultsDiv.innerHTML += '📋 Level Data Summary:\n';
+                resultsDiv.innerHTML += `Starting Points: ${levelData.starting_points.length}\n`;
+                resultsDiv.innerHTML += `End Points: ${levelData.end_points.length}\n`;
+                resultsDiv.innerHTML += `Platforms: ${levelData.rigid_bodies.length}\n`;
+                resultsDiv.innerHTML += `Coins: ${levelData.coins?.length || 0}\n`;
+                resultsDiv.innerHTML += `Spikes: ${levelData.spikes?.length || 0}\n`;
+                resultsDiv.innerHTML += `Enemies: ${levelData.enemies?.length || 0}\n\n`;
+                
+                // 检查坐标范围
+                if (levelData.starting_points.length > 0) {
+                    const start = levelData.starting_points[0].coordinates;
+                    resultsDiv.innerHTML += `🎯 Start Position: (${start[0]}, ${start[1]})\n`;
+                }
+                
+                if (levelData.end_points.length > 0) {
+                    const end = levelData.end_points[0].coordinates;
+                    resultsDiv.innerHTML += `🏁 End Position: (${end[0]}, ${end[1]})\n`;
+                }
+                
+                // 还原URL
+                history.replaceState({}, '', originalUrl);
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+        
+        window.testDatabaseMap2 = async function() {
+            const resultsDiv = document.getElementById('database-results');
+            resultsDiv.innerHTML = '🔄 Testing database map (ID: 2)...\n';
+            
+            try {
+                const levelData = await LevelLoader.fetchLevelData('2');
+                resultsDiv.innerHTML += '✅ Map data loaded successfully!\n\n';
+                resultsDiv.innerHTML += JSON.stringify(levelData, null, 2);
+            } catch (error) {
+                resultsDiv.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+        
+        window.testCanvasDetection = function() {
+            const resultsDiv = document.getElementById('database-results');
+            resultsDiv.innerHTML = '🔄 Testing canvas size detection...\n';
+            
+            try {
+                const canvasInfo = CanvasScaler.detectCanvasSize();
+                resultsDiv.innerHTML += '✅ Canvas detection completed!\n\n';
+                resultsDiv.innerHTML += `Canvas Size: ${canvasInfo.width}x${canvasInfo.height}\n`;
+                resultsDiv.innerHTML += `Aspect Ratio: ${canvasInfo.aspectRatio.toFixed(3)}\n`;
+                resultsDiv.innerHTML += `Viewport: ${window.innerWidth}x${window.innerHeight}\n\n`;
+                
+                // Try to create a mock canvas for more accurate testing
+                const mockCanvas = document.createElement('canvas');
+                mockCanvas.id = 'game-canvas';
+                mockCanvas.width = 1024;
+                mockCanvas.height = 576;
+                mockCanvas.style.display = 'none';
+                document.body.appendChild(mockCanvas);
+                
+                const canvasInfo2 = CanvasScaler.detectCanvasSize();
+                resultsDiv.innerHTML += `With Mock Canvas: ${canvasInfo2.width}x${canvasInfo2.height}\n`;
+                
+                document.body.removeChild(mockCanvas);
+            } catch (error) {
+                resultsDiv.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+        
+        window.testScalingWithCanvas = async function() {
+            const resultsDiv = document.getElementById('database-results');
+            resultsDiv.innerHTML = '🔄 Testing real-time scaling with mock canvas...\n';
+            
+            try {
+                // Create a mock canvas
+                const mockCanvas = document.createElement('canvas');
+                mockCanvas.id = 'game-canvas';
+                mockCanvas.width = 1024;
+                mockCanvas.height = 576;
+                mockCanvas.style.display = 'none';
+                document.body.appendChild(mockCanvas);
+                
+                // Fetch real map data
+                const rawData = await fetch('https://25hackmit--hackmit25-backend.modal.run/api/mario/level/1');
+                const mapData = await rawData.json();
+                
+                resultsDiv.innerHTML += '✅ Raw map data loaded!\n';
+                resultsDiv.innerHTML += `Original bounds: (${JSON.stringify(mapData.starting_points[0].coordinates)}) to (${JSON.stringify(mapData.end_points[0].coordinates)})\n\n`;
+                
+                // Apply smart scaling
+                const scaledData = CanvasScaler.smartScale(mapData);
+                
+                resultsDiv.innerHTML += '✅ Smart scaling completed!\n';
+                resultsDiv.innerHTML += `Scaled start: ${JSON.stringify(scaledData.starting_points[0].coordinates)}\n`;
+                resultsDiv.innerHTML += `Scaled end: ${JSON.stringify(scaledData.end_points[0].coordinates)}\n\n`;
+                
+                // Clean up
+                document.body.removeChild(mockCanvas);
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+        
+        window.testDefaultMap = async function() {
+            const resultsDiv = document.getElementById('database-results');
+            resultsDiv.innerHTML = '🔄 Testing default map...\n';
+            
+            try {
+                const levelData = LevelLoader.getDefaultLevelData();
+                resultsDiv.innerHTML += '✅ Default map loaded!\n\n';
+                resultsDiv.innerHTML += JSON.stringify(levelData, null, 2);
+            } catch (error) {
+                resultsDiv.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

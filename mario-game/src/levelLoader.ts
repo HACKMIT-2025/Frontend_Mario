@@ -1,3 +1,6 @@
+import { MapScaler } from './utils/MapScaler'
+import { CanvasScaler } from './utils/CanvasScaler'
+
 export interface LevelData {
   starting_points: Array<{
     coordinates: [number, number]
@@ -67,7 +70,9 @@ export class LevelLoader {
       const data = await response.json()
       console.log('📋 Level data received:', data)
 
-      return this.validateLevelData(data)
+      // 先进行智能缩放，再进行验证
+      const scaledData = this.detectAndScaleMapData(data)
+      return this.validateLevelData(scaledData)
     } catch (error) {
       console.error('❌ Failed to fetch level data:', error)
 
@@ -91,11 +96,161 @@ export class LevelLoader {
       const levelData = JSON.parse(decompressed)
 
       console.log('📋 Level data loaded from URL:', levelData)
-      return this.validateLevelData(levelData)
+      // 先进行智能缩放，再进行验证
+      const scaledData = this.detectAndScaleMapData(levelData)
+      return this.validateLevelData(scaledData)
     } catch (error) {
       console.error('❌ Failed to parse URL data:', error)
       return null
     }
+  }
+
+  /**
+   * 智能缩放地图数据（使用新的CanvasScaler）
+   */
+  static detectAndScaleMapData(data: any): any {
+    console.log('🎆 Using advanced CanvasScaler for intelligent map scaling...')
+    
+    try {
+      // 使用新的CanvasScaler进行智能缩放
+      const scaledData = CanvasScaler.smartScale(data)
+      console.log('✅ CanvasScaler completed successfully')
+      return scaledData
+    } catch (error) {
+      console.warn('⚠️ CanvasScaler failed, falling back to legacy MapScaler:', error)
+      
+      // 回退到旧的MapScaler逻辑
+      return this.legacyScaleMapData(data)
+    }
+  }
+
+  /**
+   * 旧版缩放逻辑（作为备选方案）
+   */
+  static legacyScaleMapData(data: any): any {
+    // 分析所有坐标，找出数据的实际范围
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    let totalPoints = 0
+
+    // 收集起始点坐标
+    if (data.starting_points && Array.isArray(data.starting_points)) {
+      data.starting_points.forEach((point: any) => {
+        if (point.coordinates && Array.isArray(point.coordinates)) {
+          const [x, y] = point.coordinates
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+          totalPoints++
+        }
+      })
+    }
+
+    // 收集终点坐标
+    if (data.end_points && Array.isArray(data.end_points)) {
+      data.end_points.forEach((point: any) => {
+        if (point.coordinates && Array.isArray(point.coordinates)) {
+          const [x, y] = point.coordinates
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+          totalPoints++
+        }
+      })
+    }
+
+    // 收集平台坐标
+    if (data.rigid_bodies && Array.isArray(data.rigid_bodies)) {
+      data.rigid_bodies.forEach((body: any) => {
+        if (body.contour_points && Array.isArray(body.contour_points)) {
+          body.contour_points.forEach((point: any) => {
+            if (Array.isArray(point) && point.length >= 2) {
+              const [x, y] = point
+              minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+              minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+              totalPoints++
+            }
+          })
+        }
+      })
+    }
+
+    // 收集金币坐标
+    if (data.coins && Array.isArray(data.coins)) {
+      data.coins.forEach((coin: any) => {
+        let x, y
+        if (coin.coordinates && Array.isArray(coin.coordinates)) {
+          [x, y] = coin.coordinates
+        } else if (typeof coin.x === 'number' && typeof coin.y === 'number') {
+          x = coin.x; y = coin.y
+        }
+        if (typeof x === 'number' && typeof y === 'number') {
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+          totalPoints++
+        }
+      })
+    }
+
+    // 收集刺坐标
+    if (data.spikes && Array.isArray(data.spikes)) {
+      data.spikes.forEach((spike: any) => {
+        if (spike.coordinates && Array.isArray(spike.coordinates)) {
+          const [x, y] = spike.coordinates
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+          totalPoints++
+        }
+      })
+    }
+
+    // 收集敌人坐标
+    if (data.enemies && Array.isArray(data.enemies)) {
+      data.enemies.forEach((enemy: any) => {
+        if (typeof enemy.x === 'number' && typeof enemy.y === 'number') {
+          minX = Math.min(minX, enemy.x); maxX = Math.max(maxX, enemy.x)
+          minY = Math.min(minY, enemy.y); maxY = Math.max(maxY, enemy.y)
+          totalPoints++
+        }
+      })
+    }
+
+    // 检查是否收集到了有效的坐标数据
+    if (totalPoints === 0 || !isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) {
+      console.warn('⚠️ No valid coordinates found in map data, using original data')
+      return data
+    }
+
+    // 计算数据的实际尺寸
+    const actualWidth = maxX - minX
+    const actualHeight = maxY - minY
+    
+    console.log(`📏 Legacy scaling - Map data analysis:`, {
+      coordinates: totalPoints,
+      bounds: `(${minX}, ${minY}) to (${maxX}, ${maxY})`,
+      actualSize: `${actualWidth.toFixed(1)}x${actualHeight.toFixed(1)}`,
+      standardSize: '1024x576'
+    })
+
+    // 判断是否需要缩放（如果数据范围明显小于标准尺寸）
+    const needsScaling = actualWidth < 800 || actualHeight < 400 || maxX < 800 || maxY < 400
+    
+    if (!needsScaling) {
+      console.log('📏 Map data appears to be in standard size, no scaling needed')
+      return data
+    }
+
+    // 创建MapScaler进行智能缩放
+    // 假设原始数据是基于图像的实际像素尺寸，需要缩放到1024x576
+    const scaler = new MapScaler({
+      originalWidth: actualWidth + 50,  // 给一些边距
+      originalHeight: actualHeight + 50, // 给一些边距
+      targetWidth: 1024,
+      targetHeight: 576
+    })
+
+    console.log('🔄 Applying legacy map scaling...')
+    const scaledData = scaler.scaleLevelData(data)
+    scaler.logScalingInfo()
+    
+    return scaledData
   }
 
   /**
@@ -283,7 +438,9 @@ export class LevelLoader {
       const levelData = data.level_data || data
       console.log('📋 Extracted level data:', levelData)
 
-      return this.validateLevelData(levelData)
+      // 先进行智能缩放，再进行验证
+      const scaledData = this.detectAndScaleMapData(levelData)
+      return this.validateLevelData(scaledData)
     } catch (error) {
       console.error('❌ Failed to load from JSON URL:', error)
       throw error
