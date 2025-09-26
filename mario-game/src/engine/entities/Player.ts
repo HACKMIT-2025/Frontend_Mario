@@ -116,10 +116,14 @@ export class Player extends Entity {
       ctx.globalAlpha = 0.5
     }
 
-    // Keep aspect ratio similar to sprite (64x96), but scale to game size
-    const height = this.size === 'big' ? 48 : 32
-    const width = this.size === 'big' ? 32 : 21
-
+    // Keep aspect ratio similar to sprite (64x96), but scale to game size without clipping - centered and bottom-aligned
+    const drawHeight = this.size === 'big' ? 40 : 28
+    const drawWidth = this.size === 'big' ? 26 : 18
+    
+    // Center the drawing within the collision box, bottom-aligned for consistent feet position
+    const drawX = this.position.x + (this.width - drawWidth) / 2
+    const drawY = this.position.y + (this.height - drawHeight)
+    
     // Apply color tint for power-ups
     if (this.fireballEnabled) {
       ctx.filter = 'hue-rotate(30deg) saturate(1.2)' // Orange tint
@@ -159,10 +163,10 @@ export class Player extends Entity {
       ctx,
       spriteName,
       0, // Always use frame 0 since each sprite is a complete image
-      this.position.x,
-      this.position.y,
-      width,
-      height,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight,
       false // No need to flip since we have separate left/right sprites
     )
 
@@ -173,13 +177,13 @@ export class Player extends Entity {
         ctx.fillStyle = '#FFA500' // Orange when fire power
       }
 
-      ctx.fillRect(this.position.x, this.position.y, width, height)
+      ctx.fillRect(drawX, drawY, drawWidth, drawHeight)
 
       // Draw eyes to show direction
       ctx.fillStyle = '#FFFFFF'
-      const eyeOffset = this.facing === 'right' ? width - 12 : 5
-      ctx.fillRect(this.position.x + eyeOffset, this.position.y + 8, 4, 4)
-      ctx.fillRect(this.position.x + eyeOffset, this.position.y + 16, 4, 4)
+      const eyeOffset = this.facing === 'right' ? drawWidth - 12 : 5
+      ctx.fillRect(drawX + eyeOffset, drawY + 8, 4, 4)
+      ctx.fillRect(drawX + eyeOffset, drawY + 16, 4, 4)
     }
 
     ctx.restore()
