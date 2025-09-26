@@ -61,6 +61,11 @@ export class InputManager {
    * 初始化虚拟游戏手柄
    */
   private initializeVirtualGamepad() {
+    if (this.mobileDetector.getDeviceType() === 'desktop') {
+      console.log('Desktop device detected, no virtual gamepad created')
+      return
+    }
+
     this.virtualGamepad = new VirtualGamepad((key: string, pressed: boolean) => {
       this.keys.set(key, pressed)
       this.updateInputState()
