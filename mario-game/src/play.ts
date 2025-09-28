@@ -64,6 +64,13 @@ async function initializePlayGame() {
       start_y: startY
     })
 
+    // 设置关卡ID（从URL参数获取或使用默认值）
+    const levelIdParam = urlParams.get('levelId') || urlParams.get('id')
+    const levelId = levelIdParam ? parseInt(levelIdParam, 10) : 2 // Play模式默认关卡ID=2
+    gameAPI.getEngine().setLevelId(levelId)
+    gameAPI.getEngine().enableLeaderboard(true)  // Play模式支持排行榜（从API加载关卡）
+    console.log(`🎮 设置关卡ID: ${levelId}，排行榜已启用`)
+
     // 暴露给全局（用于调试和UI控制）
     ;(window as any).gameAPI = gameAPI
     ;(window as any).GameAPI = gameAPI // 与本地引擎保持一致

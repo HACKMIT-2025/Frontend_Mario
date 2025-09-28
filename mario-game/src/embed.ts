@@ -64,6 +64,14 @@ async function initializeEmbedGame() {
       start_y: startY
     })
 
+    // 设置关卡ID（从URL参数获取或使用默认值）
+    const urlParams = new URLSearchParams(window.location.search)
+    const levelIdParam = urlParams.get('levelId') || urlParams.get('id')
+    const levelId = levelIdParam ? parseInt(levelIdParam, 10) : 3 // Embed模式默认关卡ID=3
+    gameAPI.getEngine().setLevelId(levelId)
+    gameAPI.getEngine().enableLeaderboard(true)  // Embed模式支持排行榜（从API加载关卡）
+    console.log(`🎮 设置关卡ID: ${levelId}，排行榜已启用`)
+
     // 暴露给全局（用于调试）
     window.gameAPI = gameAPI
     ;(window as any).GameAPI = gameAPI // 与本地引擎保持一致

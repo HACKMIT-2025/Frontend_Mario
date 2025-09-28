@@ -1,3 +1,6 @@
+/* Import VictoryModal styles */
+@import './ui/VictoryModal.css';
+
 * {
   margin: 0;
   padding: 0;

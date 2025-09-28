@@ -1,0 +1,521 @@
+/* 通关胜利弹窗样式 */
+
+.victory-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.victory-modal-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.victory-modal {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 3px solid #FFD700;
+  color: white;
+  font-family: 'Courier New', monospace;
+  position: relative;
+  transform: scale(0.8);
+  transition: transform 0.3s ease;
+}
+
+.victory-modal-overlay.show .victory-modal {
+  transform: scale(1);
+}
+
+/* 头部 */
+.victory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #FFD700;
+  padding-bottom: 15px;
+}
+
+.victory-header h2 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #FFD700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 10px #FFD700; }
+  to { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px #FFD700; }
+}
+
+.close-btn {
+  background: transparent;
+  border: 2px solid #fff;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.5em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: #ff4444;
+  border-color: #ff4444;
+  transform: rotate(90deg);
+}
+
+/* 统计数据 */
+.victory-stats {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 25px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.stat-label {
+  font-weight: bold;
+  color: #B0E0E6;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: #FFD700;
+  font-size: 1.1em;
+}
+
+.stat-value.perfect {
+  color: #00FF00;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.stat-value.score {
+  color: #FF6B6B;
+  font-size: 1.3em;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.perfect-run {
+  text-align: center;
+  background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 15px;
+  font-weight: bold;
+  animation: perfectGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes perfectGlow {
+  from { box-shadow: 0 0 10px rgba(255, 107, 107, 0.5); }
+  to { box-shadow: 0 0 25px rgba(255, 107, 107, 0.8); }
+}
+
+/* 玩家表单 */
+.player-form {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.player-form h3 {
+  color: #FFD700;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #B0E0E6;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #4169E1;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #FFD700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.submit-btn,
+.skip-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.submit-btn:hover {
+  background: linear-gradient(45deg, #45a049, #4CAF50);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+}
+
+.skip-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.skip-btn:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+/* 排行榜区域 */
+.leaderboard-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 25px;
+}
+
+.leaderboard-section h3 {
+  color: #FFD700;
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.submission-success {
+  background: rgba(76, 175, 80, 0.2);
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.submission-success h4 {
+  margin: 0 0 10px 0;
+  color: #4CAF50;
+}
+
+.ranking-stats {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.rank-item {
+  text-align: center;
+}
+
+.rank-label {
+  display: block;
+  font-size: 0.9em;
+  color: #B0E0E6;
+  margin-bottom: 5px;
+}
+
+.rank-value {
+  display: block;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #FFD700;
+}
+
+/* 排行榜列表 */
+.leaderboard-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.leaderboard-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.leaderboard-entry:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(5px);
+}
+
+.leaderboard-entry.rank-1 {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.3), rgba(255, 215, 0, 0.1));
+  border: 2px solid #FFD700;
+}
+
+.leaderboard-entry.rank-2 {
+  background: linear-gradient(90deg, rgba(192, 192, 192, 0.3), rgba(192, 192, 192, 0.1));
+  border: 2px solid #C0C0C0;
+}
+
+.leaderboard-entry.rank-3 {
+  background: linear-gradient(90deg, rgba(205, 127, 50, 0.3), rgba(205, 127, 50, 0.1));
+  border: 2px solid #CD7F32;
+}
+
+.rank {
+  font-weight: bold;
+  font-size: 1.2em;
+  min-width: 50px;
+  color: #FFD700;
+}
+
+.player-info {
+  flex: 1;
+  margin-left: 15px;
+}
+
+.nickname {
+  font-weight: bold;
+  color: white;
+}
+
+.country {
+  background: #333;
+  color: #FFD700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.8em;
+  margin-left: 8px;
+}
+
+.performance {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.time {
+  font-weight: bold;
+  color: #00FF00;
+}
+
+.score {
+  color: #FFD700;
+}
+
+.perfect {
+  background: linear-gradient(45deg, #FF6B6B, #FF8E8E);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: bold;
+}
+
+/* 动作按钮 */
+.victory-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 15px 25px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: bold;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-btn.primary {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: linear-gradient(45deg, #45a049, #4CAF50);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+.action-btn.secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.action-btn.secondary:hover {
+  background: #5a6268;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(108, 117, 125, 0.4);
+}
+
+/* 加载覆盖层 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #333;
+  border-top: 5px solid #FFD700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  color: white;
+  font-size: 1.2em;
+  margin: 0;
+}
+
+.error {
+  color: #ff4444;
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .victory-modal {
+    padding: 20px;
+    margin: 10px;
+    max-height: 90vh;
+  }
+
+  .victory-header h2 {
+    font-size: 1.5em;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .victory-actions {
+    flex-direction: column;
+  }
+
+  .ranking-stats {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .performance {
+    flex-direction: column;
+    gap: 5px;
+    text-align: right;
+  }
+
+  .leaderboard-entry {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .player-info {
+    margin-left: 0;
+  }
+}
+
+/* 滚动条样式 */
+.victory-modal::-webkit-scrollbar,
+.leaderboard-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.victory-modal::-webkit-scrollbar-track,
+.leaderboard-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.victory-modal::-webkit-scrollbar-thumb,
+.leaderboard-list::-webkit-scrollbar-thumb {
+  background: #FFD700;
+  border-radius: 4px;
+}
+
+.victory-modal::-webkit-scrollbar-thumb:hover,
+.leaderboard-list::-webkit-scrollbar-thumb:hover {
+  background: #FFA500;
+}

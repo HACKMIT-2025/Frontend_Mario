@@ -12,6 +12,7 @@ import { SpriteLoader } from './sprites/SpriteLoader'
 import { DialogManager } from './ui/DialogManager'
 import { DialogGenerator } from './ui/DialogGenerator'
 import { MobileDetector } from '../utils/MobileDetector'
+import { VictoryModal, type VictoryData } from '../ui/VictoryModal'
 
 export interface GameConfig {
   width?: number
@@ -59,6 +60,9 @@ export class GameEngine {
   private spritesInitialized = false
   private lastDialogCheck = 0
   private dialogCheckInterval = 10000 // Check every 15 seconds
+  private victoryModal: VictoryModal
+  private currentLevelId: number = 1 // Default level ID
+  private leaderboardEnabled: boolean = false // Whether leaderboard is enabled
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig = {}) {
     this.canvas = canvas
@@ -81,6 +85,7 @@ export class GameEngine {
     this.spriteLoader = SpriteLoader.getInstance()
     this.dialogManager = new DialogManager()
     this.dialogGenerator = new DialogGenerator(this.dialogManager)
+    this.victoryModal = new VictoryModal()
 
     // Configure physics engine for optimal performance
     this.configurePhysicsEngine()
@@ -536,34 +541,46 @@ export class GameEngine {
   private async victory() {
     this.running = false
     this.victoryState = true  // Set victory state instead of stopping everything
-    // this.score += 1000 // Bonus points for completing level
-    console.log('🎉 Victory! Time elapsed: ', this.elapsed_time, ' Number of deaths: ', this.num_deaths, ' Coins: ', this.coins)
 
-    // Generate and display teasing victory quote
+    // Calculate final score
+    const finalScore = Math.max(
+      0,
+      1000 + this.coins * 1000 - this.num_deaths * 200 + Math.floor(1000 * Math.exp(-0.05 * this.elapsed_time))
+    )
+
+    console.log('🎉 Victory! Time elapsed: ', this.elapsed_time, ' Number of deaths: ', this.num_deaths, ' Coins: ', this.coins, ' Score: ', finalScore)
+
+    // Generate and display teasing victory quote first
     await this.dialogGenerator.showVictoryQuote(
       this.num_deaths,
       this.elapsed_time,
       this.coins
     )
 
-    // Display victory message on canvas
-    // this.renderer.clear()
-    // this.ctx.save()
-    // this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'
-    // this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+    // Prepare victory data for the modal
+    const victoryData: VictoryData = {
+      completionTime: Math.round(this.elapsed_time * 1000), // Convert to milliseconds
+      deaths: this.num_deaths,
+      coins: this.coins,
+      score: finalScore,
+      levelId: this.currentLevelId
+    }
 
-    // this.ctx.fillStyle = '#FFD700'
-    // this.ctx.font = 'bold 48px Arial'
-    // this.ctx.textAlign = 'center'
-    // this.ctx.fillText('🎉 VICTORY! 🎉', this.canvas.width / 2, this.canvas.height / 2 - 50)
-
-    // this.ctx.fillStyle = '#FFFFFF'
-    // this.ctx.font = '32px Arial'
-    // this.ctx.fillText(`You used ${this.elapsed_time} seconds`, this.canvas.width / 2, this.canvas.height / 2 + 20)
-
-    // this.ctx.font = '20px Arial'
-    // this.ctx.fillText('Press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 60)
-    // this.ctx.restore()
+    // Show victory modal only if leaderboard is enabled
+    if (this.leaderboardEnabled) {
+      await this.victoryModal.show(victoryData, {
+        onClose: () => {
+          console.log('Victory modal closed')
+        },
+        onRestart: () => {
+          console.log('Restarting game...')
+          this.reset()
+          this.start()
+        }
+      })
+    } else {
+      console.log('🎉 Victory! Leaderboard disabled for this mode.')
+    }
   }
 
   private render() {
@@ -713,6 +730,19 @@ export class GameEngine {
   public setGoal(x: number, y: number) {
     this.goal_x = x
     this.goal_y = y
+  }
+
+  public setLevelId(levelId: number) {
+    this.currentLevelId = levelId
+  }
+
+  public enableLeaderboard(enabled: boolean = true) {
+    this.leaderboardEnabled = enabled
+    console.log(`🏆 Leaderboard ${enabled ? 'enabled' : 'disabled'}`)
+  }
+
+  public isLeaderboardEnabled(): boolean {
+    return this.leaderboardEnabled
   }
 
   // Dialog management methods

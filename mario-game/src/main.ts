@@ -141,6 +141,9 @@ try {
 
 gameAPI.setPlayerStart(startX!, startY!)
 
+// Set default level ID for main game mode (local level, no leaderboard)
+gameAPI.getEngine().setLevelId(1)
+gameAPI.getEngine().enableLeaderboard(false)  // 本地关卡不支持排行榜
 
 // Expose global API for external use (e.g., browser console, image recognition)
 ;(window as any).GameAPI = gameAPI

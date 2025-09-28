@@ -125,7 +125,7 @@ export class LeaderboardClient {
   private baseUrl: string
 
   constructor(baseUrl?: string) {
-    // 使用环境变量或默认值
+    // 使用环境变量或默认的Modal部署URL（主要backend现在包含所有功能包括排行榜）
     this.baseUrl = baseUrl || import.meta.env.VITE_BACKEND_URL || 'https://25hackmit--hackmit25-backend.modal.run'
   }
 
