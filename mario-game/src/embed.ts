@@ -24,7 +24,8 @@ async function initializeEmbedGame() {
     // 检查必要的DOM元素
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement
     if (!canvas) {
-      throw new Error('Game canvas not found')
+      console.error('Game canvas not found')
+      return
     }
 
     // 设置API URL（如果父窗口提供）

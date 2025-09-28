@@ -20,7 +20,8 @@ async function initializePlayGame() {
     // Check required DOM elements
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement
     if (!canvas) {
-      throw new Error('Game canvas not found')
+      console.error('Game canvas not found')
+      return
     }
 
     // 从URL参数获取API URL（如果有）

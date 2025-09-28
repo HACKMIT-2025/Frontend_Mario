@@ -89,8 +89,8 @@ app.innerHTML = `
 
 // Add starting point (Mario spawn location) from level_data.json
 const startPoint = levelData.starting_points[0]
-let startX: number | undefined = undefined
-let startY: number | undefined = undefined
+let startX: number | undefined
+let startY: number | undefined
 if (startPoint) {
   const [x, y] = startPoint.coordinates
   startX = x
@@ -104,8 +104,8 @@ if (startPoint) {
 
 // Add end point (goal pipe) from level_data.json
 const endPoint = levelData.end_points[0]
-let scaledEndX: number | undefined = undefined
-let scaledEndY: number | undefined = undefined
+let scaledEndX: number | undefined
+let scaledEndY: number | undefined
 if (endPoint) {
   const [endX, endY] = endPoint.coordinates
   scaledEndX = endX

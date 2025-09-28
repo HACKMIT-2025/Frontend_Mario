@@ -143,7 +143,7 @@ export class LeaderboardClient {
     avatar_url?: string
   }): Promise<{ success: boolean; player: Player; is_new: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard/players`, {
+      const response = await fetch(`${this.baseUrl}/api/leaderboard/players`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -168,7 +168,7 @@ export class LeaderboardClient {
    */
   async getPlayer(nickname: string): Promise<{ success: boolean; player: Player }> {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard/players/${encodeURIComponent(nickname)}`)
+      const response = await fetch(`${this.baseUrl}/api/leaderboard/players/${encodeURIComponent(nickname)}`)
 
       if (!response.ok) {
         const error = await response.json()
@@ -200,7 +200,7 @@ export class LeaderboardClient {
     }
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard/scores`, {
+      const response = await fetch(`${this.baseUrl}/api/leaderboard/scores`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -258,7 +258,7 @@ export class LeaderboardClient {
       if (options.perfect_runs_only) params.append('perfect_runs_only', 'true')
 
       const response = await fetch(
-        `${this.baseUrl}/leaderboard/levels/${levelId}?${params.toString()}`
+        `${this.baseUrl}/api/leaderboard/levels/${levelId}?${params.toString()}`
       )
 
       if (!response.ok) {
@@ -294,7 +294,7 @@ export class LeaderboardClient {
       if (options.offset) params.append('offset', options.offset.toString())
 
       const response = await fetch(
-        `${this.baseUrl}/leaderboard/players/${encodeURIComponent(nickname)}/records?${params.toString()}`
+        `${this.baseUrl}/api/leaderboard/players/${encodeURIComponent(nickname)}/records?${params.toString()}`
       )
 
       if (!response.ok) {
@@ -332,7 +332,7 @@ export class LeaderboardClient {
       if (options.offset) params.append('offset', options.offset.toString())
 
       const response = await fetch(
-        `${this.baseUrl}/leaderboard/global?${params.toString()}`
+        `${this.baseUrl}/api/leaderboard/global?${params.toString()}`
       )
 
       if (!response.ok) {
@@ -356,7 +356,7 @@ export class LeaderboardClient {
    */
   async getLevelStats(levelId: number): Promise<LevelStats> {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard/stats/level/${levelId}`)
+      const response = await fetch(`${this.baseUrl}/api/leaderboard/stats/level/${levelId}`)
 
       if (!response.ok) {
         const error = await response.json()
@@ -383,7 +383,7 @@ export class LeaderboardClient {
     database: string
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/leaderboard/health`)
+      const response = await fetch(`${this.baseUrl}/api/leaderboard/health`)
 
       if (!response.ok) {
         throw new Error('服务不可用')

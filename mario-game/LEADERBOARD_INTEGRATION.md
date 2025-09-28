@@ -60,11 +60,11 @@ Mario游戏现在集成了完整的排行榜系统，支持：
 
 ### 启用排行榜的模式
 
-```javascript
-// Play模式 - 访问URL
+```bash
+# Play模式 - 访问URL
 https://your-domain.com/play.html?levelId=123
 
-// Embed模式 - 嵌入URL
+# Embed模式 - 嵌入URL
 https://your-domain.com/embed.html?id=456
 ```
 
