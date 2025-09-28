@@ -24,26 +24,35 @@ export class MobileDetector {
     const userAgent = navigator.userAgent.toLowerCase()
     const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
     
-    // 检测屏幕尺寸
+    // 检测屏幕尺寸和窗口尺寸
     const screenWidth = window.screen.width
     const screenHeight = window.screen.height
-    const isMobileScreen = Math.max(screenWidth, screenHeight) <= 1024 && Math.min(screenWidth, screenHeight) <= 768
+    const windowWidth = window.innerWidth
+    Math.max(screenWidth, screenHeight) <= 1024 && Math.min(screenWidth, screenHeight) <= 768;
+    const isDesktopScreen = windowWidth > 1024 || screenWidth > 1440
     
     // 检测触摸支持
     this._isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
 
     // 检测是否为平板
     this._isTablet = /ipad|android(?!.*mobile)|tablet/i.test(userAgent) || 
-                    (this._isTouchDevice && Math.min(screenWidth, screenHeight) >= 768)
+                    (this._isTouchDevice && Math.min(screenWidth, screenHeight) >= 768 && windowWidth <= 1024)
 
     // 综合判断是否为移动设备
-    this._isMobile = (isMobileUA || isMobileScreen) && !this._isTablet
+    this._isMobile = isMobileUA && !this._isTablet
+    
+    // 如果是桌面屏幕，强制设置为 desktop
+    if (isDesktopScreen && !isMobileUA) {
+      this._isMobile = false
+      this._isTablet = false
+    }
 
     console.log('Device detection results:', {
       isMobile: this._isMobile,
       isTablet: this._isTablet,
       isTouchDevice: this._isTouchDevice,
       screenSize: `${screenWidth}x${screenHeight}`,
+      windowSize: `${windowWidth}x${window.innerHeight}`,
       userAgent: userAgent.substring(0, 50) + '...'
     })
   }

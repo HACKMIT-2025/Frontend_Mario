@@ -22,6 +22,12 @@ export class VirtualGamepad {
    * 创建虚拟游戏手柄
    */
   public create(): void {
+    if (this.mobileDetector.getDeviceType() === 'desktop') {
+      console.log('Desktop device detected, skipping virtual gamepad creation')
+      this.enabled = false
+      return
+    }
+
     if (this.container) {
       this.destroy()
     }
@@ -321,6 +327,11 @@ export class VirtualGamepad {
    * 创建显示/隐藏切换按钮
    */
   private createToggleButton(): void {
+    // Only create toggle button for non-desktop devices
+    if (this.mobileDetector.getDeviceType() === 'desktop') {
+      return
+    }
+
     const toggleSection = document.createElement('div')
     toggleSection.className = 'toggle-button'
     
