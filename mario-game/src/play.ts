@@ -2,6 +2,9 @@ import './style.css'
 import { GameAPI } from './engine'
 import { LevelLoader, type LevelData } from './levelLoader'
 
+// Global variable to store level data with privacy status
+let currentLevelData: LevelData | null = null
+
 console.log('🎮 Mario Game Play Mode - Starting...')
 
 let gameAPI: GameAPI
@@ -36,6 +39,9 @@ async function initializePlayGame() {
     // 加载关卡数据，使用标准尺寸（无需缩放）
     console.log('📋 Loading level data...')
     const levelData = await LevelLoader.loadLevelData(apiUrl || undefined)
+
+    // Store level data globally for privacy checking
+    currentLevelData = levelData
 
     // 提取起始点和终点用于引擎配置
     let startX = 100, startY = 400
@@ -262,10 +268,34 @@ document.addEventListener('keydown', (event) => {
 // 监听游戏事件
 window.addEventListener('gameWin', (event: any) => {
   console.log('🎉 Game won!', event.detail)
+
+  // Check if game is public to determine if score upload should be shown
+  const isPublicGame = currentLevelData?.metadata?.is_public ?? false
+  console.log('🔒 Game privacy check:', isPublicGame ? 'Public - Score upload available' : 'Private - No score upload')
+
   setTimeout(() => {
-    if (confirm('Congratulations! Restart the game?')) {
-      if (gameAPI) gameAPI.resetGame()
+    let message = 'Congratulations! You completed the level!'
+
+    if (isPublicGame) {
+      // For public games, offer score upload option
+      const uploadScore = confirm(message + '\n\nWould you like to upload your score to the leaderboard?')
+      if (uploadScore) {
+        // TODO: Implement score upload functionality here
+        console.log('🏆 Uploading score to leaderboard...')
+        // For now, just show a placeholder
+        alert('Score upload functionality will be implemented here!')
+      }
+    } else {
+      // For private games, no score upload option
+      message += '\n\n(This is a private level - scores are not uploaded to leaderboards)'
     }
+
+    // Always offer restart option
+    setTimeout(() => {
+      if (confirm(message + '\n\nRestart the game?')) {
+        if (gameAPI) gameAPI.resetGame()
+      }
+    }, isPublicGame ? 2000 : 500) // Longer delay if score upload was shown
   }, 1000)
 })
 

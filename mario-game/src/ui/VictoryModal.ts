@@ -60,81 +60,81 @@ export class VictoryModal {
     this.modal.innerHTML = `
       <div class="victory-modal">
         <div class="victory-header">
-          <h2>🎉 恭喜通关! 🎉</h2>
+          <h2>🎉 Level Complete! 🎉</h2>
           <button class="close-btn" data-action="close">×</button>
         </div>
 
         <div class="victory-content">
           <div class="victory-stats">
             <div class="stat-item">
-              <span class="stat-label">完成时间:</span>
+              <span class="stat-label">Completion Time:</span>
               <span class="stat-value">${formattedTime}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">死亡次数:</span>
+              <span class="stat-label">Deaths:</span>
               <span class="stat-value ${isPerfectRun ? 'perfect' : ''}">${victoryData.deaths}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">收集金币:</span>
+              <span class="stat-label">Coins Collected:</span>
               <span class="stat-value">${victoryData.coins}</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">最终得分:</span>
+              <span class="stat-label">Final Score:</span>
               <span class="stat-value score">${victoryData.score}</span>
             </div>
-            ${isPerfectRun ? '<div class="perfect-run">🌟 完美通关! 🌟</div>' : ''}
+            ${isPerfectRun ? '<div class="perfect-run">🌟 Perfect Run! 🌟</div>' : ''}
           </div>
 
           <div class="player-form">
-            <h3>提交成绩到排行榜</h3>
+            <h3>Submit Score to Leaderboard</h3>
             <form id="score-form">
               <div class="form-group">
-                <label for="player-name">玩家昵称:</label>
+                <label for="player-name">Player Name:</label>
                 <input
                   type="text"
                   id="player-name"
-                  placeholder="请输入您的昵称"
+                  placeholder="Enter your name"
                   maxlength="50"
                   required
                 />
               </div>
               <div class="form-group">
-                <label for="player-email">邮箱 (可选):</label>
+                <label for="player-email">Email (Optional):</label>
                 <input
                   type="email"
                   id="player-email"
-                  placeholder="your@email.com"
+                  placeholder="Enter your email"
                 />
               </div>
               <div class="form-group">
-                <label for="player-country">国家/地区 (可选):</label>
+                <label for="player-country">Country (Optional):</label>
                 <select id="player-country">
-                  <option value="">选择国家/地区</option>
-                  <option value="CN">中国</option>
-                  <option value="US">美国</option>
-                  <option value="JP">日本</option>
-                  <option value="KR">韩国</option>
-                  <option value="GB">英国</option>
-                  <option value="DE">德国</option>
-                  <option value="FR">法国</option>
-                  <option value="CA">加拿大</option>
-                  <option value="AU">澳大利亚</option>
-                  <option value="SG">新加坡</option>
+                  <option value="">Select Country</option>
+                  <option value="US">United States</option>
+                  <option value="CN">China</option>
+                  <option value="JP">Japan</option>
+                  <option value="KR">South Korea</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="CA">Canada</option>
+                  <option value="AU">Australia</option>
+                  <option value="SG">Singapore</option>
                 </select>
               </div>
               <div class="form-actions">
                 <button type="submit" class="submit-btn" data-action="submit">
-                  🏆 提交成绩
+                  🏆 Submit Score
                 </button>
                 <button type="button" class="skip-btn" data-action="skip">
-                  跳过提交
+                  Skip
                 </button>
               </div>
             </form>
           </div>
 
           <div class="leaderboard-section" id="leaderboard-section" style="display: none;">
-            <h3>🏆 排行榜</h3>
+            <h3>🏆 Leaderboard</h3>
             <div class="ranking-info" id="ranking-info"></div>
             <div class="leaderboard-content" id="leaderboard-content"></div>
           </div>
@@ -142,16 +142,16 @@ export class VictoryModal {
 
         <div class="victory-actions">
           <button class="action-btn primary" data-action="restart">
-            🔄 重新开始
+            🔄 Restart
           </button>
           <button class="action-btn secondary" data-action="close">
-            ❌ 关闭
+            ❌ Close
           </button>
         </div>
 
         <div class="loading-overlay" id="loading-overlay" style="display: none;">
           <div class="loading-spinner"></div>
-          <p>提交成绩中...</p>
+          <p>Submitting score...</p>
         </div>
       </div>
     `
@@ -223,7 +223,7 @@ export class VictoryModal {
     const playerCountry = (this.modal?.querySelector('#player-country') as HTMLSelectElement).value
 
     if (!playerName) {
-      alert('请输入您的昵称!')
+      alert('Please enter your name!')
       return
     }
 
@@ -260,7 +260,20 @@ export class VictoryModal {
       console.log('✅ 成绩提交成功:', result)
     } catch (error) {
       console.error('❌ 提交成绩失败:', error)
-      alert('提交成绩失败，请稍后重试: ' + (error instanceof Error ? error.message : '未知错误'))
+      let errorMessage = 'Failed to submit score. Please try again later.'
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase()
+        if (message.includes('not found') || message.includes('404')) {
+          errorMessage = 'Service temporarily unavailable. Please try again later.'
+        } else if (message.includes('network') || message.includes('fetch')) {
+          errorMessage = 'Network connection failed. Please check your connection and try again.'
+        } else if (message.includes('timeout')) {
+          errorMessage = 'Request timeout. Please try again.'
+        } else {
+          errorMessage = `Submission failed: ${error.message}`
+        }
+      }
+      alert(errorMessage)
     } finally {
       this.showLoading(false)
     }
@@ -274,14 +287,14 @@ export class VictoryModal {
     if (rankingInfo) {
       rankingInfo.innerHTML = `
         <div class="submission-success">
-          <h4>🎉 ${playerName}，成绩提交成功!</h4>
+          <h4>🎉 ${playerName}, score submitted successfully!</h4>
           <div class="ranking-stats">
             <div class="rank-item">
-              <span class="rank-label">时间排名:</span>
+              <span class="rank-label">Time Rank:</span>
               <span class="rank-value">#${rankings.time_rank}</span>
             </div>
             <div class="rank-item">
-              <span class="rank-label">分数排名:</span>
+              <span class="rank-label">Score Rank:</span>
               <span class="rank-value">#${rankings.score_rank}</span>
             </div>
           </div>
@@ -326,8 +339,8 @@ export class VictoryModal {
                 </div>
                 <div class="performance">
                   <span class="time">${entry.performance.completion_time_formatted}</span>
-                  <span class="score">${entry.performance.score}分</span>
-                  ${entry.performance.is_perfect_run ? '<span class="perfect">完美!</span>' : ''}
+                  <span class="score">${entry.performance.score} pts</span>
+                  ${entry.performance.is_perfect_run ? '<span class="perfect">Perfect!</span>' : ''}
                 </div>
               </div>
             `).join('')}
@@ -338,7 +351,16 @@ export class VictoryModal {
       console.error('❌ 加载排行榜失败:', error)
       const leaderboardContent = this.modal?.querySelector('#leaderboard-content')
       if (leaderboardContent) {
-        leaderboardContent.innerHTML = '<p class="error">加载排行榜失败，请稍后重试</p>'
+        let errorMessage = 'Failed to load leaderboard. Please try again later.'
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase()
+          if (message.includes('not found') || message.includes('404')) {
+            errorMessage = 'Leaderboard service temporarily unavailable.'
+          } else if (message.includes('network') || message.includes('fetch')) {
+            errorMessage = 'Network connection failed. Unable to load leaderboard.'
+          }
+        }
+        leaderboardContent.innerHTML = `<p class="error">${errorMessage}</p>`
       }
     }
   }
@@ -357,7 +379,7 @@ export class VictoryModal {
    * 处理跳过提交
    */
   private handleSkip(): void {
-    if (confirm('确定要跳过成绩提交吗？')) {
+    if (confirm('Are you sure you want to skip score submission?')) {
       this.handleClose()
     }
   }

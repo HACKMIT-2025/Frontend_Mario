@@ -23,6 +23,12 @@ export interface LevelData {
   spikes?: Array<{
     coordinates: [number, number]
   }>
+  // Add metadata for game privacy status
+  metadata?: {
+    is_public: boolean
+    level_id: string
+    title?: string
+  }
 }
 
 export class LevelLoader {
@@ -70,9 +76,44 @@ export class LevelLoader {
       const data = await response.json()
       console.log('📋 Level data received:', data)
 
+      // Fetch game metadata to get privacy status
+      let gameMetadata = null
+      try {
+        const gameResponse = await fetch(`${baseUrl}/api/db/levels/${levelId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
+
+        if (gameResponse.ok) {
+          const gameData = await gameResponse.json()
+          gameMetadata = {
+            is_public: gameData.is_public || false,
+            level_id: levelId,
+            title: gameData.title || gameData.name
+          }
+          console.log('🔒 Game privacy status:', gameMetadata.is_public ? 'Public' : 'Private')
+        }
+      } catch (metadataError) {
+        console.warn('⚠️ Could not fetch game metadata, defaulting to private:', metadataError)
+        gameMetadata = {
+          is_public: false, // Default to private for safety
+          level_id: levelId
+        }
+      }
+
       // 先进行智能缩放，再进行验证
       const scaledData = this.detectAndScaleMapData(data)
-      return this.validateLevelData(scaledData)
+      const validatedData = this.validateLevelData(scaledData)
+
+      // Add metadata to the level data
+      if (gameMetadata) {
+        validatedData.metadata = gameMetadata
+      }
+
+      return validatedData
     } catch (error) {
       console.error('❌ Failed to fetch level data:', error)
 
