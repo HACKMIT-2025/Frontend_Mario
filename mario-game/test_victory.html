@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试通关功能 - Mario Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        h1 {
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
+        }
+
+        .test-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .test-btn.secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .test-btn.danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-container {
+            display: none;
+            margin-top: 30px;
+        }
+
+        #game-canvas {
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+        }
+
+        .instructions h3 {
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 Mario Game 通关功能测试</h1>
+
+        <div class="info-box">
+            <h3>测试说明</h3>
+            <p>这个页面用于测试Mario游戏的通关弹窗和排行榜功能。</p>
+            <p>Backend URL: <code>https://25hackmit--hackmit25-backend.modal.run</code></p>
+        </div>
+
+        <div class="instructions">
+            <h3>🎯 测试步骤：</h3>
+            <ul>
+                <li>1. 点击"启动测试游戏"加载游戏</li>
+                <li>2. 使用方向键控制Mario移动</li>
+                <li>3. 到达终点触发通关</li>
+                <li>4. 查看通关弹窗是否正常显示</li>
+                <li>5. 测试输入昵称并提交成绩</li>
+                <li>6. 查看排行榜是否正常显示</li>
+            </ul>
+
+            <h3>🎮 游戏控制：</h3>
+            <ul>
+                <li>← → 方向键：左右移动</li>
+                <li>↑ 方向键或空格：跳跃</li>
+                <li>R键：重启游戏</li>
+                <li>P键：暂停/继续</li>
+            </ul>
+        </div>
+
+        <div>
+            <button class="test-btn" onclick="startTestGame()">🚀 启动测试游戏</button>
+            <button class="test-btn secondary" onclick="testVictoryModal()">🎉 测试通关弹窗</button>
+            <button class="test-btn secondary" onclick="testBackendConnection()">🔧 测试Backend连接</button>
+            <button class="test-btn danger" onclick="location.reload()">🔄 重新加载页面</button>
+        </div>
+
+        <div class="game-container" id="game-container">
+            <div id="game-ui">
+                <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 10px; color: #FFD700;">
+                    <div>死亡次数: <span id="num_deaths">0</span></div>
+                    <div>时间: <span id="elapsed_time">0</span>s</div>
+                    <div>金币: <span id="coins">0</span></div>
+                </div>
+            </div>
+            <canvas id="game-canvas" width="1024" height="576"></canvas>
+        </div>
+
+        <div class="info-box" id="status-info">
+            <p>🔍 状态：等待测试...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GameAPI } from './src/engine/index.js'
+        import { VictoryModal } from './src/ui/VictoryModal.js'
+        import { LeaderboardClient } from './src/engine/api/LeaderboardClient.js'
+
+        let gameAPI = null
+
+        window.startTestGame = async function() {
+            try {
+                updateStatus('🔧 初始化游戏引擎...')
+
+                // 显示游戏容器
+                document.getElementById('game-container').style.display = 'block'
+
+                // 创建简单的测试关卡
+                gameAPI = new GameAPI('game-canvas', {
+                    width: 1024,
+                    height: 576,
+                    gravity: 0.5,
+                    fps: 60,
+                    goal_x: 900,
+                    goal_y: 400,
+                    start_x: 100,
+                    start_y: 400
+                })
+
+                // 设置关卡ID
+                gameAPI.getEngine().setLevelId(999) // 测试关卡ID
+
+                // 构建简单关卡
+                gameAPI.clearLevel()
+                gameAPI.setPlayerStart(100, 400)
+
+                // 添加地面平台
+                gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
+                // 添加一些跳跃平台
+                gameAPI.addPlatform(300, 450, 100, 20, 'brick')
+                gameAPI.addPlatform(500, 350, 100, 20, 'brick')
+                gameAPI.addPlatform(700, 450, 100, 20, 'brick')
+
+                // 添加金币
+                gameAPI.addCoin(350, 420)
+                gameAPI.addCoin(550, 320)
+                gameAPI.addCoin(750, 420)
+
+                // 添加终点
+                gameAPI.addGoal(900, 450)
+
+                // 构建并启动游戏
+                await gameAPI.buildLevel()
+                await gameAPI.startGame()
+
+                updateStatus('✅ 游戏启动成功！请移动到终点测试通关功能。')
+
+                // 暴露到全局用于调试
+                window.gameAPI = gameAPI
+
+            } catch (error) {
+                console.error('游戏启动失败:', error)
+                updateStatus('❌ 游戏启动失败: ' + error.message)
+            }
+        }
+
+        window.testVictoryModal = async function() {
+            try {
+                updateStatus('🎉 测试通关弹窗...')
+
+                const victoryModal = new VictoryModal()
+                const testData = {
+                    completionTime: 45000, // 45秒
+                    deaths: 2,
+                    coins: 3,
+                    score: 1500,
+                    levelId: 999
+                }
+
+                await victoryModal.show(testData, {
+                    onClose: () => {
+                        updateStatus('✅ 通关弹窗测试完成（已关闭）')
+                    },
+                    onRestart: () => {
+                        updateStatus('🔄 重启按钮测试 - 功能正常')
+                    }
+                })
+
+                updateStatus('✅ 通关弹窗显示成功！请测试功能。')
+
+            } catch (error) {
+                console.error('弹窗测试失败:', error)
+                updateStatus('❌ 弹窗测试失败: ' + error.message)
+            }
+        }
+
+        window.testBackendConnection = async function() {
+            try {
+                updateStatus('🔗 测试Backend连接...')
+
+                const client = new LeaderboardClient()
+                const healthCheck = await client.healthCheck()
+
+                updateStatus(`✅ Backend连接成功！服务: ${healthCheck.service}, 数据库: ${healthCheck.database}`)
+
+            } catch (error) {
+                console.error('Backend连接失败:', error)
+                updateStatus('❌ Backend连接失败: ' + error.message)
+            }
+        }
+
+        function updateStatus(message) {
+            const statusElement = document.getElementById('status-info')
+            if (statusElement) {
+                statusElement.innerHTML = `<p>${message}</p>`
+            }
+            console.log(message)
+        }
+
+        // 初始化状态
+        updateStatus('🔍 准备就绪，可以开始测试')
+    </script>
+</body>
+</html>
