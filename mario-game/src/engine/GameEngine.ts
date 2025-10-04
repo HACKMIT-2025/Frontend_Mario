@@ -789,4 +789,47 @@ export class GameEngine {
   public stopTTS(): void {
     this.dialogManager.stopTTS()
   }
+
+  // Screenshot functionality
+  /**
+   * Capture a screenshot of the current game canvas
+   * @param format - Image format ('png' or 'jpeg')
+   * @param quality - JPEG quality (0-1), only used for JPEG format
+   * @returns Base64 encoded image data URL
+   */
+  public captureScreenshot(format: 'png' | 'jpeg' = 'png', quality: number = 0.95): string {
+    try {
+      if (format === 'jpeg') {
+        return this.canvas.toDataURL('image/jpeg', quality)
+      } else {
+        return this.canvas.toDataURL('image/png')
+      }
+    } catch (error) {
+      console.error('Failed to capture screenshot:', error)
+      throw new Error('Screenshot capture failed')
+    }
+  }
+
+  /**
+   * Capture screenshot and return as Blob (useful for uploads)
+   * @param format - Image format ('png' or 'jpeg')
+   * @param quality - JPEG quality (0-1), only used for JPEG format
+   * @returns Promise<Blob>
+   */
+  public async captureScreenshotBlob(format: 'png' | 'jpeg' = 'png', quality: number = 0.95): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      try {
+        const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png'
+        this.canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob)
+          } else {
+            reject(new Error('Failed to create blob from canvas'))
+          }
+        }, mimeType, quality)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
 }

@@ -102,6 +102,12 @@ async function initializePlayGame() {
 
     console.log('🎮 Play game started successfully!')
 
+    // 自动生成并上传截图（如果关卡没有截图）
+    try {
+      await uploadScreenshotIfNeeded(gameAPI, levelId)
+    } catch (error) {
+      console.warn('⚠️ Screenshot upload failed (non-critical):', error)
+    }
 
   } catch (error) {
     console.error('❌ Failed to initialize play game:', error)
@@ -315,6 +321,59 @@ document.addEventListener('visibilitychange', () => {
     gameAPI.pauseGame()
   }
 })
+
+/**
+ * Upload screenshot for the level if it doesn't have one
+ * @param gameAPI - The game API instance
+ * @param levelId - The level ID
+ */
+async function uploadScreenshotIfNeeded(gameAPI: GameAPI, levelId: number): Promise<void> {
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://25hackmit--hackmit25-backend.modal.run'
+
+    // Check if screenshot already exists
+    const checkResponse = await fetch(`${backendUrl}/api/db/level/${levelId}/screenshot`)
+    const checkData = await checkResponse.json()
+
+    if (checkData.has_screenshot && checkData.thumbnail_url) {
+      console.log('📸 Screenshot already exists for this level, skipping upload')
+      return
+    }
+
+    console.log('📸 No screenshot found, generating one...')
+
+    // Wait 2 seconds for the game to fully render
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Capture screenshot
+    const screenshot = gameAPI.getEngine().captureScreenshot('png')
+
+    console.log('📤 Uploading screenshot to backend...')
+
+    // Upload to backend
+    const uploadResponse = await fetch(`${backendUrl}/api/db/level/${levelId}/screenshot`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image_base64: screenshot,
+        use_imgur: true
+      })
+    })
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
+    }
+
+    const uploadData = await uploadResponse.json()
+    console.log('✅ Screenshot uploaded successfully:', uploadData.thumbnail_url)
+
+  } catch (error) {
+    console.error('❌ Failed to upload screenshot:', error)
+    throw error
+  }
+}
 
 // 错误处理
 window.addEventListener('unhandledrejection', (event) => {
