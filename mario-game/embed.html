@@ -60,33 +60,33 @@
         max-height: 100%;
       }
 
-      /* Hide UI elements - embed mode doesn't show scores etc */
+      /* UI elements outside game canvas */
       #game-ui {
-        position: absolute;
+        position: fixed;
         top: 10px;
-        left: 10px;
+        left: 50%;
+        transform: translateX(-50%);
         z-index: 100;
         color: white;
         font-size: 14px;
         text-shadow: 2px 2px 0px rgba(0,0,0,0.8);
-        background: rgba(0,0,0,0.3);
-        padding: 5px 10px;
-        border-radius: 5px;
+        background: rgba(0,0,0,0.5);
+        padding: 8px 16px;
+        border-radius: 8px;
         font-weight: bold;
+        display: flex;
+        gap: 16px;
+        backdrop-filter: blur(4px);
       }
 
       #game-ui div {
-        margin-bottom: 4px;
-      }
-
-      #game-ui div:last-child {
-        margin-bottom: 0;
+        margin: 0;
       }
 
       .num_deaths, .elapsed_time, .coins {
-        background: rgba(0,0,0,0.2);
-        padding: 2px 6px;
-        border-radius: 3px;
+        background: rgba(0,0,0,0.3);
+        padding: 4px 10px;
+        border-radius: 5px;
         display: inline-block;
       }
 
@@ -156,16 +156,15 @@
         .mobile-toggle {
           display: block;
         }
-        
+
         #game-ui {
-          font-size: 12px;
-          padding: 4px 8px;
-          top: 5px;
-          left: 5px;
+          font-size: 11px;
+          padding: 6px 12px;
+          gap: 10px;
         }
-        
+
         .num_deaths, .elapsed_time, .coins {
-          padding: 1px 4px;
+          padding: 3px 8px;
           font-size: 10px;
         }
       }
