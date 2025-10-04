@@ -91,9 +91,11 @@
       .game-section {
         flex: 1;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         padding: 20px;
+        gap: 12px;
       }
 
       #game-container {
@@ -107,7 +109,7 @@
         border: 3px solid #333;
         /* 确保在小屏幕上仍能正常显示 */
         max-width: calc(100vw - 40px);
-        max-height: calc(100vh - 200px);
+        max-height: calc(100vh - 250px);
       }
 
       #game-canvas {
@@ -120,10 +122,7 @@
       }
 
       #game-ui {
-        position: fixed;
-        top: 80px;
-        left: 50%;
-        transform: translateX(-50%);
+        position: relative;
         z-index: 100;
         background: linear-gradient(45deg, rgba(0,0,0,0.8), rgba(0,0,0,0.6));
         padding: 12px 20px;
@@ -136,6 +135,7 @@
         display: flex;
         gap: 20px;
         backdrop-filter: blur(8px);
+        width: fit-content;
       }
 
       #game-ui div {
@@ -226,12 +226,13 @@
 
         .game-section {
           padding: 10px;
+          gap: 8px;
         }
 
         #game-container {
           /* 在移动设备上保持固定尺寸，但允许适当缩放以适应屏幕 */
           max-width: calc(100vw - 20px);
-          max-height: calc(100vh - 160px);
+          max-height: calc(100vh - 200px);
           border: 2px solid #333;
           border-radius: 6px;
         }
@@ -241,10 +242,9 @@
         }
 
         #game-ui {
-          top: 8px;
-          left: 8px;
           font-size: 12px;
-          padding: 6px 10px;
+          padding: 8px 14px;
+          gap: 12px;
         }
       }
 
@@ -259,12 +259,19 @@
 
         .game-section {
           padding: 5px;
+          gap: 4px;
         }
 
         #game-container {
           /* 横屏模式下保持固定尺寸 */
           max-width: calc(100vw - 10px);
-          max-height: calc(100vh - 100px);
+          max-height: calc(100vh - 140px);
+        }
+
+        #game-ui {
+          font-size: 11px;
+          padding: 6px 12px;
+          gap: 10px;
         }
       }
     </style>
@@ -290,15 +297,15 @@
 
       <!-- Game Area -->
       <main class="game-section">
+        <!-- Game UI above container -->
+        <div id="game-ui">
+          <div class="num_deaths">Deaths: <span id="num_deaths">0</span></div>
+          <div class="elapsed_time">Time: <span id="elapsed_time">0</span></div>
+          <div class="coins">Coins: <span id="coins">0</span></div>
+        </div>
+
         <div id="game-container">
           <canvas id="game-canvas"></canvas>
-
-          <!-- Game UI -->
-          <div id="game-ui">
-            <div class="num_deaths">Deaths: <span id="num_deaths">0</span></div>
-            <div class="elapsed_time">Time: <span id="elapsed_time">0</span></div>
-            <div class="coins">Coins: <span id="coins">0</span></div>
-          </div>
 
           <!-- Loading Status -->
           <div id="loading">
