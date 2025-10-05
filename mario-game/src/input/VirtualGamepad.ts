@@ -83,14 +83,20 @@ export class VirtualGamepad {
 
         .control-pad {
           left: 20px;
-          width: 140px;
-          height: 140px;
+          width: 180px;
+          height: 80px;
+          display: flex;
+          gap: 20px;
+          align-items: center;
         }
 
         .action-buttons {
           right: 20px;
-          width: 140px;
-          height: 140px;
+          width: 100px;
+          height: 100px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .gamepad-btn {
@@ -124,39 +130,30 @@ export class VirtualGamepad {
 
         /* 方向键 */
         .dpad-btn {
-          width: 50px;
-          height: 50px;
-        }
-
-        #btn-up {
-          top: 0;
-          left: 45px;
-        }
-
-        #btn-down {
-          bottom: 0;
-          left: 45px;
+          width: 70px;
+          height: 70px;
+          font-size: 24px;
+          position: relative;
         }
 
         #btn-left {
-          left: 0;
-          top: 45px;
+          position: relative;
         }
 
         #btn-right {
-          right: 0;
-          top: 45px;
+          position: relative;
         }
 
         /* 动作按键 */
         .action-btn {
-          width: 60px;
-          height: 60px;
+          width: 90px;
+          height: 90px;
+          font-size: 16px;
+          font-weight: bold;
+          position: relative;
         }
 
         #btn-jump {
-          bottom: 40px;
-          right: 20px;
           background: rgba(76, 175, 80, 0.9);
           color: white;
         }
@@ -164,32 +161,6 @@ export class VirtualGamepad {
         #btn-jump:active,
         #btn-jump.pressed {
           background: rgba(76, 175, 80, 1);
-        }
-
-        #btn-run {
-          bottom: 40px;
-          right: 100px;
-          background: rgba(255, 193, 7, 0.9);
-          color: white;
-        }
-
-        #btn-run:active,
-        #btn-run.pressed {
-          background: rgba(255, 193, 7, 1);
-        }
-
-        #btn-action {
-          top: 20px;
-          right: 60px;
-          width: 50px;
-          height: 50px;
-          background: rgba(33, 150, 243, 0.9);
-          color: white;
-        }
-
-        #btn-action:active,
-        #btn-action.pressed {
-          background: rgba(33, 150, 243, 1);
         }
 
         /* 切换按钮 */
@@ -214,55 +185,61 @@ export class VirtualGamepad {
 
         /* 平板设备适配 */
         @media screen and (min-width: 768px) {
-          .control-pad, .action-buttons {
-            width: 160px;
-            height: 160px;
+          .control-pad {
+            width: 220px;
+            height: 100px;
+            gap: 30px;
           }
-          
+
+          .action-buttons {
+            width: 120px;
+            height: 120px;
+          }
+
           .dpad-btn {
-            width: 55px;
-            height: 55px;
+            width: 85px;
+            height: 85px;
+            font-size: 28px;
           }
-          
+
           .action-btn {
-            width: 65px;
-            height: 65px;
-          }
-          
-          #btn-up, #btn-down {
-            left: 52px;
-          }
-          
-          #btn-left, #btn-right {
-            top: 52px;
+            width: 110px;
+            height: 110px;
+            font-size: 18px;
           }
         }
 
         /* 横屏模式适配 */
         @media screen and (orientation: landscape) and (max-height: 500px) {
           #virtual-gamepad {
-            height: 120px;
-          }
-          
-          .control-pad, .action-buttons {
-            width: 100px;
             height: 100px;
           }
-          
+
+          .control-pad {
+            width: 140px;
+            height: 60px;
+            gap: 10px;
+          }
+
+          .action-buttons {
+            width: 70px;
+            height: 70px;
+          }
+
           .gamepad-section {
             bottom: 10px;
           }
-          
+
           .dpad-btn {
-            width: 35px;
-            height: 35px;
-            font-size: 14px;
+            width: 55px;
+            height: 55px;
+            font-size: 18px;
           }
-          
+
           .action-btn {
-            width: 45px;
-            height: 45px;
-            font-size: 14px;
+            width: 65px;
+            height: 65px;
+            font-size: 13px;
           }
         }
       </style>
@@ -271,15 +248,13 @@ export class VirtualGamepad {
   }
 
   /**
-   * 创建方向键
+   * 创建方向键（只保留左右）
    */
   private createControlPad(): void {
     const controlPad = document.createElement('div')
     controlPad.className = 'gamepad-section control-pad'
-    
+
     const buttons = [
-      { id: 'btn-up', class: 'gamepad-btn dpad-btn', content: '▲', key: 'ArrowUp' },
-      { id: 'btn-down', class: 'gamepad-btn dpad-btn', content: '▼', key: 'ArrowDown' },
       { id: 'btn-left', class: 'gamepad-btn dpad-btn', content: '◀', key: 'ArrowLeft' },
       { id: 'btn-right', class: 'gamepad-btn dpad-btn', content: '▶', key: 'ArrowRight' }
     ]
@@ -298,16 +273,14 @@ export class VirtualGamepad {
   }
 
   /**
-   * 创建动作按键
+   * 创建动作按键（只保留跳跃）
    */
   private createActionButtons(): void {
     const actionButtons = document.createElement('div')
     actionButtons.className = 'gamepad-section action-buttons'
-    
+
     const buttons = [
-      { id: 'btn-jump', class: 'gamepad-btn action-btn', content: 'A', key: 'Space' },
-      { id: 'btn-run', class: 'gamepad-btn action-btn', content: 'B', key: 'ShiftLeft' },
-      { id: 'btn-action', class: 'gamepad-btn action-btn', content: 'X', key: 'KeyX' }
+      { id: 'btn-jump', class: 'gamepad-btn action-btn', content: 'JUMP', key: 'Space' }
     ]
 
     buttons.forEach(btnConfig => {
