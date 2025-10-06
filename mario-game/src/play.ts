@@ -2,9 +2,16 @@ import './style.css'
 import { GameAPI } from './engine'
 import { LevelLoader, type LevelData } from './levelLoader'
 import { SpeedSelector } from './ui/SpeedSelector'
+import { LevelPackManager } from './engine/LevelPackManager'
+import { LevelPackProgressUI } from './ui/LevelPackProgressUI'
 
 // Global variable to store level data with privacy status
 let currentLevelData: LevelData | null = null
+
+// Level pack mode globals
+let packManager: LevelPackManager | null = null
+let packProgressUI: LevelPackProgressUI | null = null
+let isPackMode: boolean = false
 
 console.log('🎮 Mario Game Play Mode - Starting...')
 
@@ -31,11 +38,26 @@ async function initializePlayGame() {
     // 从URL参数获取API URL（如果有）
     const urlParams = new URLSearchParams(window.location.search)
     const apiUrl = urlParams.get('api') || urlParams.get('apiUrl')
+    const packIdParam = urlParams.get('packId')
 
     if (apiUrl) {
       console.log(`🔧 Using API URL: ${apiUrl}`)
       LevelLoader.setApiBaseUrl(apiUrl)
     }
+
+    // ============================================================================
+    // Level Pack Mode Detection
+    // ============================================================================
+    if (packIdParam) {
+      console.log(`📦 Level Pack Mode detected! Pack ID: ${packIdParam}`)
+      await initializePackMode(parseInt(packIdParam, 10))
+      return
+    }
+
+    // ============================================================================
+    // Standard Single Level Mode
+    // ============================================================================
+    console.log('🎯 Standard Single Level Mode')
 
     // 加载关卡数据，使用标准尺寸（无需缩放）
     console.log('📋 Loading level data...')
@@ -126,6 +148,236 @@ async function initializePlayGame() {
   } catch (error) {
     console.error('❌ Failed to initialize play game:', error)
   }
+}
+
+/**
+ * Initialize Level Pack Mode
+ */
+async function initializePackMode(packId: number) {
+  try {
+    isPackMode = true
+    console.log('📦 Initializing Level Pack Mode...')
+
+    // Prompt for player nickname
+    const nickname = await promptPlayerNickname()
+    if (!nickname) {
+      console.error('❌ No nickname provided, cannot start pack mode')
+      alert('You need to provide a nickname to play level packs!')
+      return
+    }
+
+    console.log(`👤 Player nickname: ${nickname}`)
+
+    // Create level pack manager
+    packManager = new LevelPackManager(packId, nickname)
+
+    // Load pack data
+    console.log('📦 Loading level pack data...')
+    await packManager.loadLevelPack()
+
+    // Load player progress
+    console.log('💾 Loading player progress...')
+    await packManager.loadProgress()
+
+    // Increment play count
+    await packManager.incrementPlayCount()
+
+    console.log(`✅ Level Pack loaded: ${packManager.getPackName()}`)
+    console.log(`📊 Starting at level ${packManager.getCurrentLevelNumber()}/${packManager.getTotalLevels()}`)
+
+    // Get current level data
+    const levelData = packManager.getCurrentLevel()
+
+    // Store level data globally
+    currentLevelData = levelData
+
+    // Extract start and goal positions
+    let startX = 100, startY = 400
+    let goalX: number | undefined, goalY: number | undefined
+
+    if (levelData.starting_points && levelData.starting_points.length > 0) {
+      const startPoint = levelData.starting_points[0]
+      startX = startPoint.coordinates[0]
+      startY = startPoint.coordinates[1]
+    }
+
+    if (levelData.end_points && levelData.end_points.length > 0) {
+      const endPoint = levelData.end_points[0]
+      goalX = endPoint.coordinates[0]
+      goalY = endPoint.coordinates[1] - 30
+    }
+
+    // Create game API instance
+    gameAPI = new GameAPI('game-canvas', {
+      width: 1024,
+      height: 576,
+      gravity: 0.5,
+      fps: 60,
+      goal_x: goalX,
+      goal_y: goalY,
+      start_x: startX,
+      start_y: startY
+    })
+
+    // Disable leaderboard in pack mode (pack has its own completion tracking)
+    gameAPI.getEngine().enableLeaderboard(false)
+    console.log('🎮 Pack mode - leaderboard disabled')
+
+    // Expose to global
+    ;(window as any).gameAPI = gameAPI
+    ;(window as any).GameAPI = gameAPI
+    ;(window as any).MarioGameAPI = gameAPI
+
+    console.log('✅ Game API initialized for pack mode')
+
+    // Build the level
+    await buildGameFromLevelData(levelData)
+
+    // Create and render progress UI
+    packProgressUI = new LevelPackProgressUI()
+    packProgressUI.render(document.body, packManager)
+
+    console.log('✅ Progress UI initialized')
+
+    // Hide loading
+    hideLoading()
+
+    // Show speed selector
+    console.log('🎮 Showing speed selector...')
+    const speedSelector = new SpeedSelector()
+    const selectedSpeed = await speedSelector.show()
+    console.log(`⚡ Selected speed multiplier: ${selectedSpeed}x`)
+
+    // Set player speed
+    const player = gameAPI.getEngine().getPlayer()
+    if (player) {
+      player.setSpeedMultiplier(selectedSpeed)
+      console.log(`✅ Player speed set to ${selectedSpeed}x`)
+    }
+
+    // Start level timer
+    packManager.startLevelTimer()
+
+    // Start game
+    await gameAPI.startGame()
+
+    console.log('🎮 Level pack game started successfully!')
+
+  } catch (error) {
+    console.error('❌ Failed to initialize pack mode:', error)
+    alert(`Failed to load level pack: ${error}`)
+  }
+}
+
+/**
+ * Prompt player for nickname
+ */
+async function promptPlayerNickname(): Promise<string | null> {
+  return new Promise((resolve) => {
+    // Create modal overlay
+    const overlay = document.createElement('div')
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    `
+
+    overlay.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(139, 92, 246, 0.95));
+        padding: 40px 50px;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+      ">
+        <h2 style="
+          color: white;
+          font-size: 32px;
+          margin-bottom: 20px;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        ">Enter Your Nickname</h2>
+        <p style="
+          color: rgba(255, 255, 255, 0.9);
+          margin-bottom: 30px;
+          font-size: 16px;
+        ">This will be used to save your progress</p>
+        <input
+          type="text"
+          id="nickname-input"
+          maxlength="20"
+          placeholder="Your nickname..."
+          style="
+            width: 300px;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            outline: none;
+          "
+        />
+        <div>
+          <button id="nickname-submit" style="
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            background: white;
+            color: #5b21b6;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+          ">Start Playing!</button>
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(overlay)
+
+    const input = overlay.querySelector('#nickname-input') as HTMLInputElement
+    const submitBtn = overlay.querySelector('#nickname-submit') as HTMLButtonElement
+
+    // Focus input
+    input.focus()
+
+    // Handle submit
+    const handleSubmit = () => {
+      const nickname = input.value.trim()
+      if (nickname) {
+        overlay.remove()
+        resolve(nickname)
+      } else {
+        input.style.border = '2px solid #ef4444'
+        setTimeout(() => {
+          input.style.border = '2px solid rgba(255, 255, 255, 0.3)'
+        }, 1000)
+      }
+    }
+
+    submitBtn.addEventListener('click', handleSubmit)
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSubmit()
+    })
+
+    // Hover effect
+    submitBtn.addEventListener('mouseenter', () => {
+      submitBtn.style.transform = 'scale(1.05)'
+    })
+    submitBtn.addEventListener('mouseleave', () => {
+      submitBtn.style.transform = 'scale(1)'
+    })
+  })
 }
 
 async function buildGameFromLevelData(levelData: LevelData) {
@@ -286,9 +538,78 @@ document.addEventListener('keydown', (event) => {
 })
 
 // 监听游戏事件
-window.addEventListener('gameWin', (event: any) => {
+window.addEventListener('gameWin', async (event: any) => {
   console.log('🎉 Game won!', event.detail)
 
+  // ============================================================================
+  // Level Pack Mode - Handle level progression
+  // ============================================================================
+  if (isPackMode && packManager && packProgressUI) {
+    console.log('📦 Pack mode - handling level completion...')
+
+    // Stop level timer and record stats
+    packManager.stopLevelTimer()
+    packManager.markCurrentLevelComplete()
+
+    const currentLevel = packManager.getCurrentLevelNumber()
+    const totalLevels = packManager.getTotalLevels()
+
+    console.log(`✅ Level ${currentLevel}/${totalLevels} completed!`)
+
+    // Update progress UI
+    packProgressUI.update()
+
+    // Check if pack is complete
+    if (packManager.isPackComplete()) {
+      console.log('🎉 Level Pack Complete!')
+
+      // Show completion screen
+      const stats = packManager.getStats()
+      packProgressUI.showCompletionScreen(stats)
+
+      return
+    }
+
+    // Move to next level
+    const hasNext = await packManager.nextLevel()
+
+    if (hasNext) {
+      const nextLevelNum = packManager.getCurrentLevelNumber()
+
+      // Show transition animation
+      packProgressUI.showLevelTransition(currentLevel, nextLevelNum)
+
+      // Wait for transition to complete
+      await new Promise(resolve => setTimeout(resolve, 2500))
+
+      // Load next level
+      console.log(`📦 Loading level ${nextLevelNum}/${totalLevels}...`)
+      const nextLevelData = packManager.getCurrentLevel()
+
+      // Store level data
+      currentLevelData = nextLevelData
+
+      // Rebuild game with new level
+      await buildGameFromLevelData(nextLevelData)
+
+      // Update progress UI
+      packProgressUI.update()
+
+      // Reset and restart game
+      gameAPI.resetGame()
+
+      // Start level timer
+      packManager.startLevelTimer()
+
+      console.log(`✅ Level ${nextLevelNum} loaded and started!`)
+    }
+
+    return
+  }
+
+  // ============================================================================
+  // Standard Single Level Mode
+  // ============================================================================
   // Check if game is public to determine if score upload should be shown
   const isPublicGame = currentLevelData?.metadata?.is_public ?? false
   console.log('🔒 Game privacy check:', isPublicGame ? 'Public - Score upload available' : 'Private - No score upload')
@@ -321,9 +642,23 @@ window.addEventListener('gameWin', (event: any) => {
 
 window.addEventListener('gameOver', (event: any) => {
   console.log('💀 Game over!', event.detail)
+
+  // Record death in pack mode
+  if (isPackMode && packManager && packProgressUI) {
+    packManager.recordDeath()
+    packProgressUI.update()
+    console.log('💀 Death recorded in pack progress')
+  }
+
   setTimeout(() => {
     if (confirm('Game over! Restart the game?')) {
-      if (gameAPI) gameAPI.resetGame()
+      if (gameAPI) {
+        gameAPI.resetGame()
+        // Restart level timer in pack mode
+        if (isPackMode && packManager) {
+          packManager.startLevelTimer()
+        }
+      }
     }
   }, 1000)
 })
