@@ -1,6 +1,7 @@
 import './style.css'
 import { GameAPI } from './engine'
 import { LevelLoader, type LevelData } from './levelLoader'
+import { SpeedSelector } from './ui/SpeedSelector'
 
 // Global variable to store level data with privacy status
 let currentLevelData: LevelData | null = null
@@ -96,6 +97,19 @@ async function initializePlayGame() {
 
     // 隐藏加载状态
     hideLoading()
+
+    // 显示速度选择器
+    console.log('🎮 Showing speed selector...')
+    const speedSelector = new SpeedSelector()
+    const selectedSpeed = await speedSelector.show()
+    console.log(`⚡ Selected speed multiplier: ${selectedSpeed}x`)
+
+    // 设置玩家速度
+    const player = gameAPI.getEngine().getPlayer()
+    if (player) {
+      player.setSpeedMultiplier(selectedSpeed)
+      console.log(`✅ Player speed set to ${selectedSpeed}x`)
+    }
 
     // 启动游戏
     await gameAPI.startGame()

@@ -22,6 +22,7 @@ export class Player extends Entity {
   private isRunning = false
   private remainingJumps = 2
   private jumpCD = 0 // frames of cooldown between jumps
+  private speedMultiplier = 1.0 // Speed multiplier for difficulty adjustment
 
   constructor(x: number, y: number) {
     super(x, y, 32, 32, 'player')
@@ -189,10 +190,19 @@ export class Player extends Entity {
     ctx.restore()
   }
 
+  public setSpeedMultiplier(multiplier: number) {
+    this.speedMultiplier = Math.max(0.5, Math.min(2.0, multiplier)) // Clamp between 0.5x and 2.0x
+  }
+
+  public getSpeedMultiplier(): number {
+    return this.speedMultiplier
+  }
+
   public handleInput(input: any) {
     if (!input) return
 
-    const speed = this.isRunning ? this.runSpeed : this.moveSpeed
+    const baseSpeed = this.isRunning ? this.runSpeed : this.moveSpeed
+    const speed = baseSpeed * this.speedMultiplier
 
     // Horizontal movement - respect wall collisions
     if (input.left && !this.wallCollision.left) {
