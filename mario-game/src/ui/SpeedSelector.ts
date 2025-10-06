@@ -16,27 +16,27 @@ export class SpeedSelector {
 
   private speedOptions: SpeedOption[] = [
     {
-      name: '慢速',
+      name: 'Slow',
       multiplier: 0.7,
-      description: '适合新手玩家',
+      description: 'Perfect for beginners',
       emoji: '🐢'
     },
     {
-      name: '正常',
+      name: 'Normal',
       multiplier: 1.0,
-      description: '标准游戏速度',
+      description: 'Standard game speed',
       emoji: '🏃'
     },
     {
-      name: '快速',
+      name: 'Fast',
       multiplier: 1.3,
-      description: '挑战你的反应',
+      description: 'Challenge your reflexes',
       emoji: '⚡'
     },
     {
-      name: '极速',
+      name: 'Extreme',
       multiplier: 1.6,
-      description: '高手专用',
+      description: 'For expert players',
       emoji: '🚀'
     }
   ]
@@ -76,7 +76,7 @@ export class SpeedSelector {
 
     // Title
     const title = document.createElement('h2')
-    title.textContent = '🎮 选择游戏速度'
+    title.textContent = '🎮 Select Game Speed'
     title.style.cssText = `
       color: white;
       font-size: 32px;
@@ -87,7 +87,7 @@ export class SpeedSelector {
     `
 
     const subtitle = document.createElement('p')
-    subtitle.textContent = '选择你喜欢的移动速度，开始游戏吧！'
+    subtitle.textContent = 'Choose your preferred movement speed and start playing!'
     subtitle.style.cssText = `
       color: rgba(255, 255, 255, 0.9);
       font-size: 16px;
@@ -111,7 +111,7 @@ export class SpeedSelector {
 
     // Keyboard hint
     const hint = document.createElement('p')
-    hint.textContent = '💡 提示：使用键盘方向键 ← → 选择，回车确认'
+    hint.textContent = '💡 Tip: Use arrow keys ← → to select, press Enter to confirm'
     hint.style.cssText = `
       color: rgba(255, 255, 255, 0.7);
       font-size: 14px;
@@ -194,7 +194,7 @@ export class SpeedSelector {
     `
 
     const multiplierText = document.createElement('div')
-    multiplierText.textContent = `${option.multiplier}x 速度`
+    multiplierText.textContent = `${option.multiplier}x Speed`
     multiplierText.style.cssText = `
       color: rgba(255, 255, 255, 0.7);
       font-size: 12px;

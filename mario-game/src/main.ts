@@ -1,6 +1,7 @@
 import './style.css'
 import { GameAPI } from './engine'
 import { MobileDetector } from './utils/MobileDetector'
+import { SpeedSelector } from './ui/SpeedSelector'
 
 // Default level data (embedded to avoid deployment issues)
 const levelData = {
@@ -246,76 +247,95 @@ GameAPI.importJSON(json)
 GameAPI.generateFromImageData(imageData)
 `)
 
-// Get the dialog generator
-const dialogGenerator = gameAPI.getEngine().getDialogGenerator();
+// Initialize game with speed selector
+async function initializeGame() {
+  // Get the dialog generator
+  const dialogGenerator = gameAPI.getEngine().getDialogGenerator();
 
-// Configure backend API for AI dialog generation
-dialogGenerator.configureBackend();
+  // Configure backend API for AI dialog generation
+  dialogGenerator.configureBackend();
 
-// Test the connection (optional)
-const isConnected = await dialogGenerator.testBackendConnection();
-console.log('AI system ready:', isConnected);
+  // Test the connection (optional)
+  const isConnected = await dialogGenerator.testBackendConnection();
+  console.log('AI system ready:', isConnected);
 
-// Enable AI (after configuration)
-const success = dialogGenerator.enableAI();
+  // Enable AI (after configuration)
+  const success = dialogGenerator.enableAI();
 
-console.log('AI enabled:', success);
+  console.log('AI enabled:', success);
 
-// Check if AI is enabled
-const isAIEnabled = dialogGenerator.isAIEnabled();
+  // Check if AI is enabled
+  const isAIEnabled = dialogGenerator.isAIEnabled();
 
-console.log('Is AI enabled?', isAIEnabled);
+  console.log('Is AI enabled?', isAIEnabled);
 
-// Load custom level based on level_data.json
-gameAPI.clearLevel()
+  // Load custom level based on level_data.json
+  gameAPI.clearLevel()
 
-// gameAPI.loadClassicLevel()
+  // gameAPI.loadClassicLevel()
 
-// gameAPI.buildLevel().startGame()
+  // gameAPI.buildLevel().startGame()
 
-const coins = levelData.coins
-coins.forEach((coin: any) => {
-  const [coinX, coinY] = coin.coordinates
-  gameAPI.addCoin(coinX, coinY)
-})
-
-const spikes = levelData.spikes
-spikes.forEach((spike: any) => {
-  const [spikeX, spikeY] = spike.coordinates
-  gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
-})
-
-// Add ground platform for safety
-// gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
-
-// Add demo spikes to showcase the new addSpike functionality
-// // Large spike (64x64)
-// gameAPI.addSpike(300, 400, 64)
-// // Medium spike (48x48)
-// gameAPI.addSpike(400, 416, 48)
-// // Standard spike (32x32)
-// gameAPI.addSpike(500, 432, 32)
-
-// Add rigid bodies as polygons from level_data.json
-levelData.rigid_bodies.forEach((rigidBody: any) => {
-  // Scale contour points to fit game world
-  const scaledContours = rigidBody.contour_points.map((point: any) => {
-    const [x, y] = point
-    return [
-      x, y
-    ]
+  const coins = levelData.coins
+  coins.forEach((coin: any) => {
+    const [coinX, coinY] = coin.coordinates
+    gameAPI.addCoin(coinX, coinY)
   })
 
-  // Add polygon with scaled coordinates
-  gameAPI.addPolygon(scaledContours, 'polygon')
-})
-// loadCustomLevel(gameAPI.getEngine())
-if (scaledEndX !== undefined && scaledEndY !== undefined) {
-  gameAPI.addGoal(scaledEndX, scaledEndY)
-}
-gameAPI.buildLevel()
-gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
+  const spikes = levelData.spikes
+  spikes.forEach((spike: any) => {
+    const [spikeX, spikeY] = spike.coordinates
+    gameAPI.addSpike(spikeX, spikeY, 32) // Standard 32x32 spike
+  })
 
-gameAPI.startGame()
-// Load classic level as default
-// gameAPI.loadClassicLevel()
+  // Add ground platform for safety
+  // gameAPI.addPlatform(0, 550, 1024, 26, 'ground')
+
+  // Add demo spikes to showcase the new addSpike functionality
+  // // Large spike (64x64)
+  // gameAPI.addSpike(300, 400, 64)
+  // // Medium spike (48x48)
+  // gameAPI.addSpike(400, 416, 48)
+  // // Standard spike (32x32)
+  // gameAPI.addSpike(500, 432, 32)
+
+  // Add rigid bodies as polygons from level_data.json
+  levelData.rigid_bodies.forEach((rigidBody: any) => {
+    // Scale contour points to fit game world
+    const scaledContours = rigidBody.contour_points.map((point: any) => {
+      const [x, y] = point
+      return [
+        x, y
+      ]
+    })
+
+    // Add polygon with scaled coordinates
+    gameAPI.addPolygon(scaledContours, 'polygon')
+  })
+  // loadCustomLevel(gameAPI.getEngine())
+  if (scaledEndX !== undefined && scaledEndY !== undefined) {
+    gameAPI.addGoal(scaledEndX, scaledEndY)
+  }
+  gameAPI.buildLevel()
+  gameAPI.getEngine().setLevelData(gameAPI.builder.levelData)
+
+  // Show speed selector before starting game
+  console.log('🎮 Showing speed selector...')
+  const speedSelector = new SpeedSelector()
+  const selectedSpeed = await speedSelector.show()
+  console.log(`⚡ Selected speed multiplier: ${selectedSpeed}x`)
+
+  // Set player speed
+  const player = gameAPI.getEngine().getPlayer()
+  if (player) {
+    player.setSpeedMultiplier(selectedSpeed)
+    console.log(`✅ Player speed set to ${selectedSpeed}x`)
+  }
+
+  gameAPI.startGame()
+  // Load classic level as default
+  // gameAPI.loadClassicLevel()
+}
+
+// Start the game
+initializeGame()
