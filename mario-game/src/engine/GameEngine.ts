@@ -505,11 +505,14 @@ export class GameEngine {
 
   private respawnPlayer() {
     if (this.player) {
-      this.player.position.x = 100
-      this.player.position.y = 400
+      // Use the level's designated starting position instead of hardcoded values
+      this.player.position.x = this.start_x ?? 100
+      this.player.position.y = this.start_y ?? 400
       this.player.velocity.x = 0
       this.player.velocity.y = 0
       this.player.makeInvulnerable(2000) // 2 seconds invulnerability
+
+      console.log(`🔄 Player respawned at (${this.player.position.x}, ${this.player.position.y})`)
     }
   }
 
@@ -730,6 +733,12 @@ export class GameEngine {
   public setGoal(x: number, y: number) {
     this.goal_x = x
     this.goal_y = y
+  }
+
+  public setStartPosition(x: number, y: number) {
+    this.start_x = x
+    this.start_y = y
+    console.log(`🎯 Player start position updated to (${x}, ${y})`)
   }
 
   public setLevelId(levelId: number) {

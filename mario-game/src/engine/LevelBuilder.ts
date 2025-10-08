@@ -169,6 +169,9 @@ export class LevelBuilder {
     const player = new Player(this.levelData.playerStart.x, this.levelData.playerStart.y)
     this.engine.setPlayer(player)
 
+    // Update engine's start position for respawning
+    this.engine.setStartPosition(this.levelData.playerStart.x, this.levelData.playerStart.y)
+
     // Set goal if defined
     if (this.levelData.goal) {
       level.setGoal(this.levelData.goal.x, this.levelData.goal.y)

@@ -31,6 +31,28 @@ export interface LevelData {
   }
 }
 
+export interface LevelPackData {
+  id: number
+  name: string
+  description?: string
+  creator_nickname?: string
+  difficulty: string
+  is_public: boolean
+  created_at: string
+  levels: Array<{
+    id: number
+    name?: string
+    title?: string
+    difficulty: string
+    order_index: number
+    data: any // Raw level JSON data
+  }>
+  likes_count?: number
+  plays_count?: number
+  shares_count?: number
+  completion_count?: number
+}
+
 export class LevelLoader {
   private static apiBaseUrl = import.meta.env.VITE_BACKEND_URL || 'https://25hackmit--hackmit25-backend.modal.run' // Use backend API
 
@@ -43,6 +65,14 @@ export class LevelLoader {
   }
 
   /**
+   * Get packId from URL
+   */
+  static getPackId(): string | null {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get('pack')
+  }
+
+  /**
    * Detect current page mode
    */
   static getPageMode(): 'main' | 'play' | 'embed' {
@@ -50,6 +80,37 @@ export class LevelLoader {
     if (pathname.includes('play')) return 'play'
     if (pathname.includes('embed')) return 'embed'
     return 'main'
+  }
+
+  /**
+   * Get level pack data from API
+   */
+  static async fetchLevelPackData(packId: string, apiUrl?: string): Promise<LevelPackData> {
+    const baseUrl = apiUrl || this.apiBaseUrl
+
+    try {
+      console.log(`🎮 Fetching level pack data for ID: ${packId}`)
+
+      const response = await fetch(`${baseUrl}/api/level-packs/${packId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const packData = await response.json()
+      console.log('📦 Level pack data received:', packData)
+
+      return packData
+    } catch (error) {
+      console.error('❌ Failed to fetch level pack data:', error)
+      throw error
+    }
   }
 
   /**

@@ -2,6 +2,8 @@ import './style.css'
 import { GameAPI } from './engine'
 import { LevelLoader, type LevelData } from './levelLoader'
 import { SpeedSelector } from './ui/SpeedSelector'
+import { LevelPackManager } from './engine/LevelPackManager'
+import { LevelPackProgressUI } from './ui/LevelPackProgressUI'
 
 console.log('🎮 Mario Game Embed Mode - Starting...')
 
@@ -17,6 +19,8 @@ declare global {
 }
 
 let gameAPI: GameAPI
+let packManager: LevelPackManager | null = null
+let packUI: LevelPackProgressUI | null = null
 
 async function initializeEmbedGame() {
   try {
@@ -34,7 +38,17 @@ async function initializeEmbedGame() {
       LevelLoader.setApiBaseUrl(window.MARIO_API_URL)
     }
 
-    // 加载关卡数据，使用标准尺寸（无需缩放）
+    // 检测是否为 Pack 模式
+    const packId = LevelLoader.getPackId()
+
+    if (packId) {
+      // Pack 模式：加载关卡包
+      console.log('📦 Pack mode detected! Loading pack:', packId)
+      await initializePackMode(parseInt(packId))
+      return
+    }
+
+    // 单关卡模式：加载关卡数据，使用标准尺寸（无需缩放）
     console.log('📋 Loading level data...')
     const levelData = await LevelLoader.loadLevelData(window.MARIO_API_URL)
 
@@ -356,6 +370,163 @@ window.addEventListener('message', (event) => {
 //     }
 //   })
 // }
+
+// Pack Mode Initialization
+async function initializePackMode(packId: number) {
+  try {
+    console.log('📦 Initializing Pack Mode...')
+
+    // 获取玩家昵称（从 localStorage 或提示用户输入）
+    let playerNickname = localStorage.getItem('player_nickname')
+    if (!playerNickname) {
+      playerNickname = prompt('Enter your nickname:') || 'Player'
+      localStorage.setItem('player_nickname', playerNickname)
+    }
+
+    // 创建 Pack Manager
+    packManager = new LevelPackManager(packId, playerNickname)
+
+    // 加载关卡包数据
+    await packManager.loadLevelPack()
+
+    // 加载玩家进度
+    await packManager.loadProgress()
+
+    // 增加播放计数
+    await packManager.incrementPlayCount()
+
+    // 获取当前关卡数据
+    const levelData = packManager.getCurrentLevel()
+
+    console.log(`🎮 Loading level ${packManager.getCurrentLevelNumber()}/${packManager.getTotalLevels()}`)
+
+    // 提取起始点和终点用于引擎配置
+    let startX = 100, startY = 400
+    let goalX: number | undefined, goalY: number | undefined
+
+    if (levelData.starting_points && levelData.starting_points.length > 0) {
+      const startPoint = levelData.starting_points[0]
+      startX = startPoint.coordinates[0]
+      startY = startPoint.coordinates[1]
+    }
+
+    if (levelData.end_points && levelData.end_points.length > 0) {
+      const endPoint = levelData.end_points[0]
+      goalX = endPoint.coordinates[0]
+      goalY = endPoint.coordinates[1] - 30
+    }
+
+    // 创建游戏API实例
+    gameAPI = new GameAPI('game-canvas', {
+      width: 1024,
+      height: 576,
+      gravity: 0.5,
+      fps: 60,
+      goal_x: goalX,
+      goal_y: goalY,
+      start_x: startX,
+      start_y: startY
+    })
+
+    // 设置关卡ID
+    const currentLevelId = packManager.getCurrentLevelNumber()
+    gameAPI.getEngine().setLevelId(currentLevelId)
+    gameAPI.getEngine().enableLeaderboard(false) // Pack 模式禁用单关卡排行榜
+
+    // 暴露给全局
+    window.gameAPI = gameAPI
+    ;(window as any).GameAPI = gameAPI
+    ;(window as any).MarioGameAPI = gameAPI
+
+    // 构建关卡
+    await buildGameFromLevelData(levelData)
+
+    // 隐藏加载状态
+    window.hideLoading()
+
+    // 创建并显示 Pack Progress UI
+    packUI = new LevelPackProgressUI()
+    packUI.render(document.body, packManager)
+
+    // 显示速度选择器
+    const speedSelector = new SpeedSelector()
+    const selectedSpeed = await speedSelector.show()
+
+    const player = gameAPI.getEngine().getPlayer()
+    if (player) {
+      player.setSpeedMultiplier(selectedSpeed)
+    }
+
+    // 开始关卡计时
+    packManager.startLevelTimer()
+
+    // 启动游戏
+    await gameAPI.startGame()
+
+    // 监听游戏胜利事件，切换到下一关
+    setupPackModeEventListeners()
+
+    console.log('✅ Pack mode initialized successfully!')
+
+  } catch (error) {
+    console.error('❌ Failed to initialize pack mode:', error)
+    window.showError(error instanceof Error ? error.message : '关卡包加载失败')
+  }
+}
+
+// Pack Mode Event Listeners
+function setupPackModeEventListeners() {
+  // 监听游戏胜利
+  window.addEventListener('gameWin', async () => {
+    if (!packManager || !packUI) return
+
+    console.log('🎉 Level completed!')
+
+    // 停止计时
+    packManager.stopLevelTimer()
+
+    // 标记关卡完成
+    packManager.markCurrentLevelComplete()
+
+    // 检查是否完成所有关卡
+    if (packManager.isPackComplete()) {
+      console.log('🎊 Pack completed!')
+      const stats = packManager.getStats()
+      packUI.showCompletionScreen(stats)
+      await packManager.saveProgress()
+      return
+    }
+
+    // 显示关卡过渡动画
+    const currentLevel = packManager.getCurrentLevelNumber()
+    const hasNext = await packManager.nextLevel()
+
+    if (hasNext) {
+      packUI.showLevelTransition(currentLevel, packManager.getCurrentLevelNumber())
+
+      // 2秒后加载下一关
+      setTimeout(async () => {
+        try {
+          // 重新加载页面加载下一关
+          location.reload()
+        } catch (error) {
+          console.error('Failed to load next level:', error)
+          window.showError('Failed to load next level')
+        }
+      }, 2000)
+    }
+  })
+
+  // 监听玩家死亡
+  window.addEventListener('playerDeath', () => {
+    if (packManager) {
+      packManager.recordDeath()
+      if (packUI) {
+        packUI.update()
+      }
+    }
+  })
+}
 
 // 错误处理
 window.addEventListener('unhandledrejection', (event) => {
