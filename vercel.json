@@ -1,0 +1,90 @@
+{
+  "buildCommand": "cd mario-game && npm run build",
+  "outputDirectory": "mario-game/dist",
+  "installCommand": "cd mario-game && npm install",
+  "framework": null,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/embed.html",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    },
+    {
+      "source": "/embed/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors *"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/play/:id",
+      "destination": "/play.html?id=:id"
+    },
+    {
+      "source": "/embed/:id",
+      "destination": "/embed.html?id=:id"
+    },
+    {
+      "source": "/play",
+      "destination": "/play.html"
+    },
+    {
+      "source": "/embed",
+      "destination": "/embed.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/game/:id",
+      "destination": "/play/:id",
+      "permanent": false
+    }
+  ]
+}
