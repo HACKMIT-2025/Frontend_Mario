@@ -553,6 +553,18 @@ export class GameEngine {
 
     console.log('🎉 Victory! Time elapsed: ', this.elapsed_time, ' Number of deaths: ', this.num_deaths, ' Coins: ', this.coins, ' Score: ', finalScore)
 
+    // Trigger gameWin event for external listeners (e.g., pack mode)
+    window.dispatchEvent(new CustomEvent('gameWin', {
+      detail: {
+        completionTime: Math.round(this.elapsed_time * 1000),
+        deaths: this.num_deaths,
+        coins: this.coins,
+        score: finalScore,
+        levelId: this.currentLevelId
+      }
+    }))
+    console.log('🎮 gameWin event dispatched')
+
     // Generate and display teasing victory quote first
     await this.dialogGenerator.showVictoryQuote(
       this.num_deaths,
