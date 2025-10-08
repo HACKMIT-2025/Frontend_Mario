@@ -504,9 +504,14 @@ function setupPackModeEventListeners() {
     if (hasNext) {
       packUI.showLevelTransition(currentLevel, packManager.getCurrentLevelNumber())
 
+      // 确保进度已保存，然后再重新加载
+      console.log('💾 Ensuring progress is saved before reloading...')
+      await packManager.saveProgress()
+
       // 2秒后加载下一关
       setTimeout(async () => {
         try {
+          console.log(`🔄 Reloading to load level ${packManager.getCurrentLevelNumber()}...`)
           // 重新加载页面加载下一关
           location.reload()
         } catch (error) {
