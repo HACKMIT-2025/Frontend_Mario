@@ -145,9 +145,18 @@ export class SpeedSelector {
         transform: translateY(-5px) scale(1.05);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
       }
+      .speed-option-card:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+      }
       .speed-option-card.selected {
         transform: scale(1.08);
         box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+      @media (max-width: 768px) {
+        .speed-option-card {
+          min-height: 140px;
+        }
       }
     `
     document.head.appendChild(style)
@@ -163,10 +172,13 @@ export class SpeedSelector {
       background: rgba(255, 255, 255, 0.15);
       border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 15px;
-      padding: 25px 20px;
+      padding: 30px 20px;
       cursor: pointer;
       text-align: center;
       backdrop-filter: blur(10px);
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     `
 
     const emoji = document.createElement('div')
@@ -206,10 +218,45 @@ export class SpeedSelector {
     card.appendChild(description)
     card.appendChild(multiplierText)
 
-    // Click handler
-    card.addEventListener('click', () => {
+    // Prevent double-click/double-tap
+    let isProcessing = false
+
+    const handleSelection = (e: Event) => {
+      if (isProcessing) return
+      isProcessing = true
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Visual feedback
+      card.style.transform = 'scale(0.95)'
+      setTimeout(() => {
+        card.style.transform = ''
+      }, 100)
+
       this.selectOption(option.multiplier)
-    })
+
+      // Reset after selection completes
+      setTimeout(() => {
+        isProcessing = false
+      }, 500)
+    }
+
+    // Touch events for mobile (better responsiveness)
+    card.addEventListener('touchstart', (e) => {
+      e.preventDefault()
+      card.style.transform = 'scale(0.95)'
+      card.style.opacity = '0.8'
+    }, { passive: false })
+
+    card.addEventListener('touchend', (e) => {
+      card.style.transform = ''
+      card.style.opacity = '1'
+      handleSelection(e)
+    }, { passive: false })
+
+    // Click event for desktop
+    card.addEventListener('click', handleSelection)
 
     return card
   }
