@@ -511,7 +511,7 @@ function setupPackModeEventListeners() {
       // 2秒后加载下一关
       setTimeout(async () => {
         try {
-          console.log(`🔄 Reloading to load level ${packManager.getCurrentLevelNumber()}...`)
+          console.log(`🔄 Reloading to load level ${packManager?.getCurrentLevelNumber() || 'next'}...`)
           // 重新加载页面加载下一关
           location.reload()
         } catch (error) {
